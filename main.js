@@ -1,9 +1,22 @@
+//TODO
+//TODO
+//TODO
+//TODO
+//TODO
+//TODO Если вызывается отрисовка пустой версии, то не должно ничего произойти
+//TODO Если вызвать Push на пустую версию, то она должна начинать отрисовываться из корня
+//TODO Если вызвать Pop на пустую версию, то ничего не должно произойти
+//TODO
+//TODO
+//TODO
+//TODO
+//TODO
+//TODO
+
 let _main_nodes = [
 ]
 let _dynamic_nodes = [
 ];
-
-
 
 
 let _versions = [
@@ -177,12 +190,16 @@ function Pop(version_num = -1) {
         x_coord = _versions.at(-1).x + 30;
         y_coord = _versions.at(-1).y;
         _versions.push(new Version(null, null, null, null, 0, 0, 0, _versions.length, _versions.length, version_num, x_coord, y_coord));
+        console.log('Pop made successfully');
+        UpdateVersionsLayout();
         return;
     }
     if (version.size === 2) {
         x_coord = _versions.at(-1).x + 30;
         y_coord = _versions.at(-1).y;
         _versions.push(new Version(version.tail, version.tail, null, null, 1, 0, 0, _versions.length, _versions.length, version_num, x_coord, y_coord));
+        console.log('Pop made successfully');
+        UpdateVersionsLayout();
         return;
     }
     x_coord = _versions.at(-1).x + 30;
