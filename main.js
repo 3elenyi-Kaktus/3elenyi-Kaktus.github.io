@@ -15,15 +15,20 @@
 
 let _main_nodes = [
 ]
+let _links = [
+    {id: 0, source: 0, target: 0, strength: 0.1}
+]
+
+
 let _dynamic_nodes = [
+];
+let _dynamic_links = [
+    {id: 0, source: 0, target: 0, strength: 0.1}
 ];
 
 
 let _versions = [
 ];
-let _links = [
-    {id: 0, source: 0, target: 0, strength: 0.1}
-]
 
 
 
@@ -42,8 +47,16 @@ let Zoom;
 const linkStr = 0.1;
 
 
+let sec_svg;
+let sec_sim;
+let sec_width = 1000;
+let sec_height = 600;
+let sec_linkForce;
+let sec_overall_id = 1;
+
+
 let overall_id = 1;
-let is_processing = false;
+let is_updating_layout = false;
 let chosen_version = -1;
 
 
@@ -80,9 +93,13 @@ class Node {
     y;
 }
 class ListNode {
-    constructor(next_list, target_node) {
+    constructor(next_list = null, target_node = null, id = null, label = null, x = 0, y = 0) {
         this.next_list = next_list;
         this.target_node = target_node;
+        this.id = id;
+        this.label = label;
+        this.x = x;
+        this.y = y;
     }
 //Algorythmic
     next_list;
@@ -126,7 +143,8 @@ class Version {
 }
 
 async function Push(version_num = -1, value = -1) {
-    console.log('Push called');
+    StopUpdatingLayout();
+    console.log(`Push called.`);
     if (version_num === -1) {
         let x = document.getElementById('push_form');
         value = x.push_value.value;
@@ -142,7 +160,7 @@ async function Push(version_num = -1, value = -1) {
         version_num = Number(version_num);
     }
     let parent_version = _versions[version_num];
-
+    console.log(`Parent version: ${version_num}`)
 
     let x_coord = _main_nodes[parent_version.tail].x - 30;
     let y_coord = _main_nodes[parent_version.tail].y - 30;
@@ -167,11 +185,11 @@ async function Push(version_num = -1, value = -1) {
 
 
     console.log('Push made successfully');
-    UpdateVersionsLayout();
     await UpdateLayout();
 }
 function Pop(version_num = -1) {
-    console.log('Pop called');
+    StopUpdatingLayout();
+    console.log(`Pop called.`);
     if (version_num === -1) {
         let x = document.getElementById('pop_form');
         version_num = x.pop_version.value;
@@ -181,6 +199,7 @@ function Pop(version_num = -1) {
         }
         version_num = Number(version_num);
     }
+    console.log(`Parent version: ${version_num}.`)
 
     let version = _versions[version_num];
     let pop_value = _main_nodes[version.head].value;
@@ -212,11 +231,11 @@ function Pop(version_num = -1) {
     let operational_list_size = version.operational_list_size - 1;
     let dynamic_list_size = version.dynamic_list_size;
     _versions.push(new Version(first_el, last_el, operational_list, dynamic_list, size, operational_list_size, dynamic_list_size, _versions.length, _versions.length, version_num, x_coord, y_coord));
-    ChangeDynamicList(_versions[_versions.length - 1]);
+    ChangeDynamicList(_versions.at(-1));
 
     console.log('Pop made successfully');
     UpdateVersionsLayout();
-
+    console.log(`Version layout ended.`);
 }
 function ListsExchange(version) {
     if (version.dynamic_list !== null && _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id === version.head) {
@@ -232,14 +251,35 @@ function ListsExchange(version) {
 function ChangeDynamicList(version) {
     let curr_version_nodes_size = Math.max(0, version.size - 2);
     if (version.operational_list_size * 2 < curr_version_nodes_size && !ListsExchange(version)) {
-        let new_dynamic_node;
+        let targeted_main_node;
         if (version.dynamic_list !== null) {
-            new_dynamic_node = _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id;
+            targeted_main_node = _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id;
         } else {
-            new_dynamic_node = _main_nodes[version.tail].son_id;
+            targeted_main_node = _main_nodes[version.tail].son_id;
         }
-        console.log('New dynamic node created. Target node id: ' + new_dynamic_node);
-        _dynamic_nodes.push(new ListNode(version.dynamic_list, new_dynamic_node));
+        console.log(`New dynamic node created. Target node id: ${targeted_main_node}`);
+
+        let next_list;
+        if (version.dynamic_list !== null) {
+            next_list = version.dynamic_list;
+        } else {
+            next_list = 0;
+        }
+        let x_coord = _dynamic_nodes[next_list].x - 30;
+        let y_coord = _dynamic_nodes[next_list].y - 30;
+        _dynamic_nodes.push(new ListNode(version.dynamic_list, targeted_main_node, _dynamic_nodes.length, sec_overall_id++, x_coord, y_coord));
+
+
+        let son_id;
+        if (version.dynamic_list !== null) {
+            son_id = version.dynamic_list;
+        } else {
+            son_id = 0;
+        }
+        console.log('Dynamic node son_id: ' + son_id);
+        _dynamic_links.push(new Link(_dynamic_links.length, _dynamic_nodes.length - 1, son_id));
+
+
         version.dynamic_list = _dynamic_nodes.length - 1;
         ++version.dynamic_list_size;
         ListsExchange(version);
@@ -270,119 +310,6 @@ function isNum(value) {
 function Debug() {
 
 }
-
-
-
-function UpdateVersionsLayout() {
-    ver_svg.select('g.links')
-        .selectAll('line')
-        .data(_links)
-        .enter().append('line')
-        .attr('class', 'arrow_link')
-        .attr('id', function (link) {
-            return link.id
-        })
-
-    ver_svg.select('g.nodes')
-        .selectAll('circle')
-        .data(_versions)
-        .enter().append('circle')
-        .attr('r', 10)
-        .attr('class', 'version_node')
-        .attr('id', function (node) {
-            return node.id
-        })
-        .on('click', VersionClick)
-
-    ver_svg.select('g.texts')
-        .selectAll('text')
-        .data(_versions)
-        .enter().append('text')
-        .text(function (node) {
-            return node.label
-        })
-        .attr('class', 'version_text')
-        .attr('dx', 7)
-        .attr('dy', 20)
-
-
-
-    MakeMovableVersions();
-
-
-    ver_sim
-        .restart();
-}
-async function UpdateLayout() {
-    svg.select('g.links')
-        .selectAll('line')
-        .data(_links)
-        .enter().append('line')
-        .attr('class', 'arrow_link')
-        .attr('id', function (link) {
-            return link.id
-        })
-
-    svg.select('g.nodes')
-        .selectAll('circle')
-        .data(_main_nodes)
-        .enter().append('circle')
-        .attr('r', 10)
-        .attr('class', 'regular_node')
-        .attr('id', function (node) {
-            return node.id
-        })
-
-    svg.select('g.texts')
-        .selectAll('text')
-        .data(_main_nodes)
-        .enter().append('text')
-        .text(function (node) {
-            return node.label
-        })
-        .attr('class', 'graph_text')
-        .attr("dx", 7)
-        .attr("dy", -10)
-
-    MakeMovableMain();
-
-    simulation
-        .alpha(0.5)
-        .alphaTarget(0.3)
-        .restart();
-
-    if (!is_processing) {
-        is_processing = true;
-        await sleep(7000);
-        simulation.stop();
-        is_processing = false;
-    }
-}
-function MakeMovableMain() {
-    let linkElements = svg.select('g.links').selectAll("line")
-    let nodeElements = svg.select('g.nodes').selectAll("circle")
-    let textElements = svg.select('g.texts').selectAll("text")
-
-    simulation.nodes(_main_nodes).on('tick', () => {
-        nodeElements
-            .attr('cx', function (node) {return node.x})
-            .attr('cy', function (node) {return node.y})
-        textElements
-            .attr('x', function (node) {return node.x})
-            .attr('y', function (node) {return node.y})
-        linkElements
-            .attr('x1', function (link) {return link.source.x})
-            .attr('y1', function (link) {return link.source.y})
-            .attr("x2", function(d) {
-                return getTargetNodeCircumferencePoint(d)[0];
-            })
-            .attr("y2", function(d) {
-                return getTargetNodeCircumferencePoint(d)[1];
-            })
-        // .attr('x2', function (link) {return link.target.x})
-        // .attr('y2', function (link) {return link.target.y})
-    })
-}
 function getTargetNodeCircumferencePoint(d){
     let t_radius = 12; // nodeWidth is just a custom attribute I calculate during the creation of the nodes depending on the node width
     let dx = d.target.x - d.source.x;
@@ -391,25 +318,6 @@ function getTargetNodeCircumferencePoint(d){
     let tx = d.target.x - (Math.cos(gamma) * t_radius);
     let ty = d.target.y - (Math.sin(gamma) * t_radius);
     return [tx,ty];
-}
-function MakeMovableVersions() {
-    let linkElements = ver_svg.select('g.links').selectAll("line")
-    let nodeElements = ver_svg.select('g.nodes').selectAll("circle")
-    let textElements = ver_svg.select('g.texts').selectAll("text")
-
-    ver_sim.nodes(_versions).on('tick', () => {
-        nodeElements
-            .attr('cx', function (node) {return node.x})
-            .attr('cy', function (node) {return node.y})
-        textElements
-            .attr('x', function (node) {return node.x})
-            .attr('y', function (node) {return node.y})
-        linkElements
-            .attr('x1', function (link) {return link.source.x})
-            .attr('y1', function (link) {return link.source.y})
-            .attr('x2', function (link) {return link.target.x})
-            .attr('y2', function (link) {return link.target.y})
-    })
 }
 
 
@@ -471,6 +379,66 @@ function SetupVersionSVG() {
 
     MakeMovableVersions();
 }
+function MakeMovableVersions() {
+    let linkElements = ver_svg.select('g.links').selectAll("line")
+    let nodeElements = ver_svg.select('g.nodes').selectAll("circle")
+    let textElements = ver_svg.select('g.texts').selectAll("text")
+
+    ver_sim.nodes(_versions).on('tick', () => {
+        nodeElements
+            .attr('cx', function (node) {return node.x})
+            .attr('cy', function (node) {return node.y})
+        textElements
+            .attr('x', function (node) {return node.x})
+            .attr('y', function (node) {return node.y})
+        linkElements
+            .attr('x1', function (link) {return link.source.x})
+            .attr('y1', function (link) {return link.source.y})
+            .attr('x2', function (link) {return link.target.x})
+            .attr('y2', function (link) {return link.target.y})
+    })
+}
+function UpdateVersionsLayout() {
+    ver_svg.select('g.links')
+        .selectAll('line')
+        .data(_links)
+        .enter().append('line')
+        .attr('class', 'arrow_link')
+        .attr('id', function (link) {
+            return link.id
+        })
+
+    ver_svg.select('g.nodes')
+        .selectAll('circle')
+        .data(_versions)
+        .enter().append('circle')
+        .attr('r', 10)
+        .attr('class', 'version_node')
+        .attr('id', function (node) {
+            return node.id
+        })
+        .on('click', VersionClick)
+
+    ver_svg.select('g.texts')
+        .selectAll('text')
+        .data(_versions)
+        .enter().append('text')
+        .text(function (node) {
+            return node.label
+        })
+        .attr('class', 'version_text')
+        .attr('dx', 7)
+        .attr('dy', 20)
+
+
+
+    MakeMovableVersions();
+
+
+    ver_sim
+        .restart();
+}
+
 function SetupMainSVG() {
     svg = d3.select('#main_svg');
 
@@ -545,23 +513,250 @@ function SetupMainSVG() {
 
     simulation.force('link').links(_links)
 }
+function MakeMovableMain() {
+    let linkElements = svg.select('g.links').selectAll("line")
+    let nodeElements = svg.select('g.nodes').selectAll("circle")
+    let textElements = svg.select('g.texts').selectAll("text")
+
+    simulation.nodes(_main_nodes).on('tick', () => {
+        nodeElements
+            .attr('cx', function (node) {return node.x})
+            .attr('cy', function (node) {return node.y})
+        textElements
+            .attr('x', function (node) {return node.x})
+            .attr('y', function (node) {return node.y})
+        linkElements
+            .attr('x1', function (link) {return link.source.x})
+            .attr('y1', function (link) {return link.source.y})
+            .attr("x2", function(d) {
+                return getTargetNodeCircumferencePoint(d)[0];
+            })
+            .attr("y2", function(d) {
+                return getTargetNodeCircumferencePoint(d)[1];
+            })
+        // .attr('x2', function (link) {return link.target.x})
+        // .attr('y2', function (link) {return link.target.y})
+    })
+}
+function UpdateMainLayout() {
+    svg.select('g.links')
+        .selectAll('line')
+        .data(_links)
+        .enter().append('line')
+        .attr('class', 'arrow_link')
+        .attr('id', function (link) {
+            return link.id
+        })
+
+    svg.select('g.nodes')
+        .selectAll('circle')
+        .data(_main_nodes)
+        .enter().append('circle')
+        .attr('r', 10)
+        .attr('class', 'regular_node')
+        .attr('id', function (node) {
+            return node.id
+        })
+
+    svg.select('g.texts')
+        .selectAll('text')
+        .data(_main_nodes)
+        .enter().append('text')
+        .text(function (node) {
+            return node.label
+        })
+        .attr('class', 'graph_text')
+        .attr("dx", 7)
+        .attr("dy", -10)
+
+    MakeMovableMain();
+
+    simulation
+        .alpha(0.5)
+        .alphaTarget(0.3)
+        .restart();
+}
+
+function SetupSecondarySVG() {
+    sec_svg = d3.select('#secondary_svg');
+
+    sec_svg.attr('width', sec_width)
+        .attr('height', sec_height)
+        .style('background', 'blue')
+
+    sec_linkForce = d3
+        .forceLink()
+        .id(function (link) {
+            return link.id
+        })
+        .strength(function (link) {
+            return link.strength
+        })
+
+    sec_sim = d3
+        .forceSimulation()
+        .force('link', sec_linkForce)
+        .force('charge', d3.forceManyBody().strength(-50))
+        .force('center', d3.forceCenter(sec_width / 2, sec_height / 2))
+
+    sec_svg.append('g')
+        .attr('class', 'links')
+
+    sec_svg.append('g')
+        .attr('class', 'nodes')
+        .selectAll('circle')
+        .data(_dynamic_nodes)
+        .enter().append('circle')
+        .attr('r', 10)
+        .attr('class', 'regular_node')
+        .attr('id', function (node) {
+            return node.id
+        })
+
+    sec_svg.append('g')
+        .attr('class', 'texts')
+        .selectAll('text')
+        .data(_dynamic_nodes)
+        .enter().append('text')
+        .text(function (node) {
+            return node.label
+        })
+        .attr('class', 'graph_text')
+        .attr('dx', 10)
+        .attr('dy', -7)
+
+    const markerBoxWidth = 8;
+    const markerBoxHeight = 5;
+    const refX = markerBoxWidth / 2;
+    const refY = markerBoxHeight / 2;
+    const markerWidth = markerBoxWidth / 2;
+    const markerHeight = markerBoxHeight / 2;
+    const arrowPoints = [[0, 0], [0, 8], [5, 4]];
+
+    sec_svg
+        .append('defs')
+        .append('marker')
+        .attr('id', 'arrow')
+        .attr('viewBox', [0, 0, markerBoxWidth, markerBoxHeight])
+        .attr('refX', refX)
+        .attr('refY', refY)
+        .attr('markerWidth', markerWidth)
+        .attr('markerHeight', markerHeight)
+        .attr('orient', 'auto-start-reverse')
+        .append('path')
+        .attr('d', d3.line()(arrowPoints))
+        .attr('stroke', 'black');
+
+    MakeMovableSecondary();
+
+    sec_sim.force('link').links(_dynamic_links)
+}
+function MakeMovableSecondary() {
+    let linkElements = sec_svg.select('g.links').selectAll("line")
+    let nodeElements = sec_svg.select('g.nodes').selectAll("circle")
+    let textElements = sec_svg.select('g.texts').selectAll("text")
+
+    sec_sim.nodes(_dynamic_nodes).on('tick', () => {
+        nodeElements
+            .attr('cx', function (node) {return node.x})
+            .attr('cy', function (node) {return node.y})
+        textElements
+            .attr('x', function (node) {return node.x})
+            .attr('y', function (node) {return node.y})
+        linkElements
+            .attr('x1', function (link) {return link.source.x})
+            .attr('y1', function (link) {return link.source.y})
+            .attr("x2", function(d) {
+                return getTargetNodeCircumferencePoint(d)[0];
+            })
+            .attr("y2", function(d) {
+                return getTargetNodeCircumferencePoint(d)[1];
+            })
+        // .attr('x2', function (link) {return link.target.x})
+        // .attr('y2', function (link) {return link.target.y})
+    })
+}
+function UpdateSecondaryLayout() {
+    sec_svg.select('g.links')
+        .selectAll('line')
+        .data(_dynamic_links)
+        .enter().append('line')
+        .attr('class', 'arrow_link')
+        .attr('id', function (link) {
+            return link.id
+        })
+
+    sec_svg.select('g.nodes')
+        .selectAll('circle')
+        .data(_dynamic_nodes)
+        .enter().append('circle')
+        .attr('r', 10)
+        .attr('class', 'regular_node')
+        .attr('id', function (node) {
+            return node.id
+        })
+
+    sec_svg.select('g.texts')
+        .selectAll('text')
+        .data(_dynamic_nodes)
+        .enter().append('text')
+        .text(function (node) {
+            return node.label
+        })
+        .attr('class', 'graph_text')
+        .attr("dx", 7)
+        .attr("dy", -10)
+
+    MakeMovableSecondary();
+
+    sec_sim
+        .alpha(0.5)
+        .alphaTarget(0.3)
+        .restart();
+}
+
 function Setup() {
     _versions.push(new Version(0, 0, null, null, 1, 0, 0, 0, 'Sv', null, 25, 25));
-    _main_nodes.push(new Node(null, null, 0, 'Sn', 0, 0));
+    _main_nodes.push(new Node(null, null, 0, 'Sn', 40, 40));
+    _dynamic_nodes.push(new ListNode(null, null, 0, 'Sn_dyn', 40, 40));
 
     SetupVersionSVG();
     SetupMainSVG();
+    SetupSecondarySVG();
 
     // Push(0, 1).then();
     // Push(1, 2).then();
     // Push(2, 3).then();
     // Push(2, 4).then();
 }
-
+async function UpdateLayout() {
+    is_updating_layout = true;
+    console.log(`Started version layout`);
+    UpdateVersionsLayout();
+    console.log(`Ended version layout`);
+    console.log(`Started main layout`);
+    UpdateMainLayout();
+    console.log(`Ended main layout`);
+    console.log(`Started secondary layout`);
+    UpdateSecondaryLayout();
+    console.log(`Ended secindary layout`);
+    await sleep(7000);
+    StopUpdatingLayout();
+    console.log(`Ended reshaping layout`);
+}
+function StopUpdatingLayout() {
+    if (is_updating_layout) {
+        simulation.stop();
+        sec_sim.stop();
+        is_updating_layout = false;
+    }
+}
 
 
 
 async function VersionClick() {
+    StopUpdatingLayout();
+    console.log(`Version was clicked.`);
     let version = _versions[this.id];
     if (chosen_version !== -1) {
         svg.select('g.nodes')
@@ -614,9 +809,12 @@ async function VersionClick() {
         .select("[id='" + version.tail + "']")
         .attr('class', 'tail_node');
 
+    console.log(`Parameters were reassigned.`);
     await UpdateLayout();  //TODO необязательная штука, перестраивает все поле снова
 }
+function redraw_secondary() {
 
+}
 
 
 
