@@ -28,16 +28,16 @@
             stroke-width: 1px;
             opacity: 25%;
         }
+        [class=version_node] {
+            fill: red;
+            stroke: white;
+            stroke-width: 1px;
+        }
         [class=mid_node] {
             fill: black;
             stroke: black;
             stroke-width: 1px;
             opacity: 85%;
-        }
-        [class=version_node] {
-            fill: red;
-            stroke: white;
-            stroke-width: 1px;
         }
         [class=head_node] {
             fill: green;
@@ -46,6 +46,16 @@
         }
         [class=tail_node] {
             fill: red;
+            stroke: black;
+            stroke-width: 1px;
+        }
+        [class=operational_node] {
+            fill: aqua;
+            stroke: black;
+            stroke-width: 1px;
+        }
+        [class=dynamic_node] {
+            fill: yellow;
             stroke: black;
             stroke-width: 1px;
         }
@@ -67,30 +77,29 @@
     </div>
     <div>
         <svg id="main_svg"></svg>
-    </div>
-    <div>
         <svg id="secondary_svg"></svg>
     </div>
 
 
+
     <form id="push_form" onsubmit="return false">
         <label for="push_value">Push </label>
-        <input type="text" id="push_value" name="push_value">
+        <input type="text" id="push_value" name="push_value" size="7">
         <label for="push_version"> to version </label>
-        <input type="text" id="push_version" name="push_version">
+        <input type="text" id="push_version" name="push_version" size="7">
         <label> of stack. </label>
         <button onclick="Push()">Push</button>
     </form>
 
     <form id="pop_form" onsubmit="return false">
         <label for="pop_version">Pop last value from version </label>
-        <input type="text" id="pop_version" name="pop_version">
+        <input type="text" id="pop_version" name="pop_version" size="7">
         <label>version of stack. </label>
         <button id="pop" onclick="Pop()"> Pop from version</button>
     </form>
 
 
-<!--    <button id="to_main" onclick="ToMain()"> To main</button>-->
+    <button id="debug" onclick="Debug()"> Debug </button>
 
 <script>
     Setup();

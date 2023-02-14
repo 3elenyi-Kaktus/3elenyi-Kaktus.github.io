@@ -16,14 +16,12 @@
 let _main_nodes = [
 ]
 let _links = [
-    {id: 0, source: 0, target: 0, strength: 0.1}
 ]
 
 
 let _dynamic_nodes = [
 ];
 let _dynamic_links = [
-    {id: 0, source: 0, target: 0, strength: 0.1}
 ];
 
 
@@ -34,31 +32,33 @@ let _versions = [
 
 let ver_svg;
 let ver_sim;
+let ver_width = 1500;
+let ver_height = 50;
+
 
 
 let svg;
-let width = window.innerWidth;
-let height = window.innerHeight;
-width = 1200;
-height = 700;
-let linkForce;
 let simulation;
+let width = 900; // = window.innerWidth;
+let height = 650; // = window.innerHeight;
+let linkForce;
+let overall_id = 1;
 let Zoom;
-const linkStr = 0.1;
+
 
 
 let sec_svg;
 let sec_sim;
-let sec_width = 1000;
-let sec_height = 600;
+let sec_width = 700;
+let sec_height = 650;
 let sec_linkForce;
 let sec_overall_id = 1;
 
 
-let overall_id = 1;
+
 let is_updating_layout = false;
 let chosen_version = -1;
-
+const linkStr = 0.25;
 
 
 class Link {
@@ -73,7 +73,6 @@ class Link {
     target;
     strength;
 }
-
 class Node {
     constructor(son = null, value = null, id = null, label = null, x = 0, y = 0) {
         this.son_id = son;
@@ -173,7 +172,7 @@ async function Push(version_num = -1, value = -1) {
 
     x_coord = _versions.at(-1).x + 30;
     y_coord = _versions.at(-1).y;
-    let first_el = parent_version.head !== null ? parent_version.head : new_node;
+    let first_el = parent_version.head !== 0 ? parent_version.head : new_node;
     let last_el = new_node;
     let operational_list = parent_version.operational_list;
     let dynamic_list = parent_version.dynamic_list;
@@ -267,7 +266,7 @@ function ChangeDynamicList(version) {
         }
         let x_coord = _dynamic_nodes[next_list].x - 30;
         let y_coord = _dynamic_nodes[next_list].y - 30;
-        _dynamic_nodes.push(new ListNode(version.dynamic_list, targeted_main_node, _dynamic_nodes.length, sec_overall_id++, x_coord, y_coord));
+        _dynamic_nodes.push(new ListNode(next_list, targeted_main_node, _dynamic_nodes.length, sec_overall_id++, x_coord, y_coord));
 
 
         let son_id;
@@ -307,9 +306,6 @@ function isNum(value) {
     document.getElementById("main_page").hidden = false;
     document.getElementById("stack_page").hidden = true;
 }*/
-function Debug() {
-
-}
 function getTargetNodeCircumferencePoint(d){
     let t_radius = 12; // nodeWidth is just a custom attribute I calculate during the creation of the nodes depending on the node width
     let dx = d.target.x - d.source.x;
@@ -319,14 +315,30 @@ function getTargetNodeCircumferencePoint(d){
     let ty = d.target.y - (Math.sin(gamma) * t_radius);
     return [tx,ty];
 }
-
+function Debug() {
+    Push(0, 1).then();
+    Push(1, 2).then();
+    Push(2, 3).then();
+    Push(3, 4).then();
+    Push(4, 5).then();
+    Push(5, 6).then();
+    Push(5, 7).then();
+    Push(5, 8).then();
+    Push(5, 9).then();
+    Push(6, 10).then();
+    Push(10, 11).then();
+    Push(7, 12).then();
+    Push(12, 13).then();
+    Push(11, 14).then();
+    Push(14, 15).then();
+}
 
 
 function SetupVersionSVG() {
     ver_svg = d3.select('#versions_svg');
 
-    ver_svg.attr('width', 1200)
-        .attr('height', 50)
+    ver_svg.attr('width', ver_width)
+        .attr('height', ver_height)
         .style('background', 'black')
 
     ver_svg.append('g')
@@ -582,7 +594,9 @@ function SetupSecondarySVG() {
 
     sec_svg.attr('width', sec_width)
         .attr('height', sec_height)
-        .style('background', 'blue')
+        .style('position', 'absolute')
+        .style('margin-left', '5px')
+        .style('background', 'aquamarine')
 
     sec_linkForce = d3
         .forceLink()
@@ -716,18 +730,13 @@ function UpdateSecondaryLayout() {
 }
 
 function Setup() {
-    _versions.push(new Version(0, 0, null, null, 1, 0, 0, 0, 'Sv', null, 25, 25));
-    _main_nodes.push(new Node(null, null, 0, 'Sn', 40, 40));
-    _dynamic_nodes.push(new ListNode(null, null, 0, 'Sn_dyn', 40, 40));
+    _versions.push(new Version(0, 0, null, null, 0, 0, 0, 0, 'Sv', null, 25, 25));
+    _main_nodes.push(new Node(null, null, 0, 'Sm', 40, 40));
+    _dynamic_nodes.push(new ListNode(null, null, 0, 'Sd', 40, 40));
 
     SetupVersionSVG();
     SetupMainSVG();
     SetupSecondarySVG();
-
-    // Push(0, 1).then();
-    // Push(1, 2).then();
-    // Push(2, 3).then();
-    // Push(2, 4).then();
 }
 async function UpdateLayout() {
     is_updating_layout = true;
@@ -739,7 +748,7 @@ async function UpdateLayout() {
     console.log(`Ended main layout`);
     console.log(`Started secondary layout`);
     UpdateSecondaryLayout();
-    console.log(`Ended secindary layout`);
+    console.log(`Ended secondary layout`);
     await sleep(7000);
     StopUpdatingLayout();
     console.log(`Ended reshaping layout`);
@@ -756,64 +765,114 @@ function StopUpdatingLayout() {
 
 async function VersionClick() {
     StopUpdatingLayout();
-    console.log(`Version was clicked.`);
+    console.log(`Version ${this.id} was clicked.`);
     let version = _versions[this.id];
-    if (chosen_version !== -1) {
-        svg.select('g.nodes')
-            .select("[id='" + _versions[chosen_version].head + "']")
-            .attr('class', 'regular_node');
-        svg.select('g.nodes')
-            .select("[id='" + _versions[chosen_version].tail + "']")
-            .attr('class', 'regular_node');
-    }
 
-    if (chosen_version === Number(version.id)) {
+
+    if (chosen_version === version.id) { // Version is same, return graph to default
         svg.select('g.nodes')
             .selectAll('circle')
             .attr('class', 'regular_node');
         svg.select('g.links')
             .selectAll('line')
             .attr('class', 'arrow_link');
+
+        sec_svg.select('g.nodes')
+            .selectAll('circle')
+            .attr('class', 'regular_node');
+        sec_svg.select('g.links')
+            .selectAll('line')
+            .attr('class', 'arrow_link');
         chosen_version = -1;
+        console.log(`Parameters were reassigned.`);
+        await UpdateLayout();  //TODO необязательная штука, перестраивает все поле снова
         return;
     }
-    chosen_version = Number(version.id);
 
 
+    chosen_version = version.id;    // New version clicked, make all graph faint
     svg.select('g.links')
         .selectAll('line')
         .attr('class', 'faint_arrow_link');
     svg.select('g.nodes')
         .selectAll('circle')
         .attr('class', 'faint_node');
+    sec_svg.select('g.links')
+        .selectAll('line')
+        .attr('class', 'faint_arrow_link');
+    sec_svg.select('g.nodes')
+        .selectAll('circle')
+        .attr('class', 'faint_node');
 
 
+    let curr_node = svg.select('g.nodes')   // Draw the body with black nodes
+        .select("[id='" + version.tail + "']");
     let curr_link = svg.select('g.links')
-        .select("[id='" + version.tail + "']");
-    let curr_node = svg.select('g.nodes')
-        .select("[id='" + version.tail + "']");
-    while (curr_link.attr('id') !== version.head.toString()) {
+        .select("[id='" + (version.tail - 1) + "']");
+    while (Number(curr_node.attr('id')) > version.head) {
         curr_node.attr('class', 'mid_node');
         curr_link.attr('class', 'arrow_link');
-        curr_node = svg.select('g.nodes')
-            .select("[id='" + _links[Number(curr_link.attr('id'))].target.id + "']");
         curr_link = svg.select('g.links')
-            .select("[id='" + _links[Number(curr_link.attr('id'))].target.id + "']");
+            .select("[id='" + (_main_nodes[Number(curr_node.attr('id'))].son_id - 1) + "']");
+        curr_node = svg.select('g.nodes')
+            .select("[id='" + _main_nodes[Number(curr_node.attr('id'))].son_id + "']");
+    }
+
+    if (version.operational_list !== null) {
+        curr_node = sec_svg.select('g.nodes')   // Draw the operational list with aqua nodes
+            .select("[id='" + version.operational_list + "']");
+        curr_link = sec_svg.select('g.links')
+            .select("[id='" + (version.operational_list - 1) + "']");
+        while (Number(curr_node.attr('id')) > 0) {
+            curr_node.attr('class', 'operational_node');
+            if (_dynamic_links[curr_link.attr('id')].target.id !== 0) {
+                curr_link.attr('class', 'arrow_link');
+            }
+            curr_link = sec_svg.select('g.links')
+                .select("[id='" + (_dynamic_nodes[Number(curr_node.attr('id'))].next_list - 1) + "']");
+            curr_node = sec_svg.select('g.nodes')
+                .select("[id='" + _dynamic_nodes[Number(curr_node.attr('id'))].next_list + "']");
+
+        }
     }
 
 
-    svg.select('g.nodes')
+    if (version.dynamic_list !== null) {
+        curr_node = sec_svg.select('g.nodes')   // Draw the dynamic list with yellow nodes
+            .select("[id='" + version.dynamic_list + "']");
+        curr_link = sec_svg.select('g.links')
+            .select("[id='" + (version.dynamic_list - 1) + "']");
+        while (Number(curr_node.attr('id')) > 0) {
+            curr_node.attr('class', 'dynamic_node');
+            if (_dynamic_links[curr_link.attr('id')].target.id !== 0) {
+                curr_link.attr('class', 'arrow_link');
+            }
+            curr_link = sec_svg.select('g.links')
+                .select("[id='" + (_dynamic_nodes[Number(curr_node.attr('id'))].next_list - 1) + "']");
+            curr_node = sec_svg.select('g.nodes')
+                .select("[id='" + _dynamic_nodes[Number(curr_node.attr('id'))].next_list + "']");
+
+        }
+    }
+
+
+
+
+
+    svg.select('g.nodes')       // Draw head and tail nodes
         .select("[id='" + version.head + "']")
         .attr('class', 'head_node');
     svg.select('g.nodes')
         .select("[id='" + version.tail + "']")
         .attr('class', 'tail_node');
 
+
+
+
+
+
     console.log(`Parameters were reassigned.`);
     await UpdateLayout();  //TODO необязательная штука, перестраивает все поле снова
-}
-function redraw_secondary() {
-
 }
 
 
