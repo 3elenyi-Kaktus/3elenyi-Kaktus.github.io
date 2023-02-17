@@ -43,7 +43,7 @@ let width = 900; // = window.innerWidth;
 let height = 650; // = window.innerHeight;
 let linkForce;
 let overall_id = 1;
-let Zoom;
+let zoom;
 
 
 
@@ -53,12 +53,13 @@ let sec_width = 700;
 let sec_height = 650;
 let sec_linkForce;
 let sec_overall_id = 1;
+let sec_zoom;
 
 
 
 let is_updating_layout = false;
 let chosen_version = -1;
-const linkStr = 0.25;
+const linkStr = 0.1;
 
 
 class Link {
@@ -170,7 +171,7 @@ async function Push(version_num = -1, value = -1) {
     _links.push(new Link(_links.length, new_node, _main_nodes[new_node].son_id));
 
 
-    x_coord = _versions.at(-1).x + 30;
+    x_coord = _versions.at(-1).x + 32;
     y_coord = _versions.at(-1).y;
     let first_el = parent_version.head !== 0 ? parent_version.head : new_node;
     let last_el = new_node;
@@ -266,7 +267,7 @@ function ChangeDynamicList(version) {
         }
         let x_coord = _dynamic_nodes[next_list].x - 30;
         let y_coord = _dynamic_nodes[next_list].y - 30;
-        _dynamic_nodes.push(new ListNode(next_list, targeted_main_node, _dynamic_nodes.length, sec_overall_id++, x_coord, y_coord));
+        _dynamic_nodes.push(new ListNode(next_list, targeted_main_node, _dynamic_nodes.length, targeted_main_node, x_coord, y_coord));
 
 
         let son_id;
@@ -314,6 +315,13 @@ function getTargetNodeCircumferencePoint(d){
     let tx = d.target.x - (Math.cos(gamma) * t_radius);
     let ty = d.target.y - (Math.sin(gamma) * t_radius);
     return [tx,ty];
+}
+function HandleZoom(e) {
+    if (!['main_svg', 'secondary_svg'].includes(e.sourceEvent.target.id.toString())) {
+        return;
+    }
+    d3.selectAll('#' + e.sourceEvent.target.id + ' g')
+        .attr('transform', e.transform);
 }
 function Debug() {
     Push(0, 1).then();
@@ -499,6 +507,13 @@ function SetupMainSVG() {
         .attr('dx', 10)
         .attr('dy', -7)
 
+    zoom = d3.zoom()
+        .scaleExtent([0.2, 5])
+        // .translateExtent([[0, 0], [width, height]])
+        .on('zoom', HandleZoom);
+    d3.select('#main_svg')
+        .call(zoom);
+
     const markerBoxWidth = 8;
     const markerBoxHeight = 5;
     const refX = markerBoxWidth / 2;
@@ -638,6 +653,13 @@ function SetupSecondarySVG() {
         .attr('class', 'graph_text')
         .attr('dx', 10)
         .attr('dy', -7)
+
+    sec_zoom = d3.zoom()
+        .scaleExtent([0.2, 5])
+        // .translateExtent([[0, 0], [width, height]])
+        .on('zoom', HandleZoom);
+    d3.select('#secondary_svg')
+        .call(sec_zoom);
 
     const markerBoxWidth = 8;
     const markerBoxHeight = 5;

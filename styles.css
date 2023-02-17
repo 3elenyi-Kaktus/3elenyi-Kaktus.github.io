@@ -1,0 +1,72 @@
+[class=arrow_link] {
+    stroke-width: 3px;
+    stroke: rgba(50, 50, 50, 0.2);
+    marker-end: url(#arrow);
+}
+
+[class=faint_arrow_link] {
+    stroke-width: 3px;
+    stroke: rgba(50, 50, 50, 0.2);
+    marker-end: url(#arrow);
+    opacity: 25%;
+}
+
+[class=regular_node] {
+    fill: grey;
+    stroke: black;
+    stroke-width: 1px;
+}
+
+[class=faint_node] {
+    fill: white;
+    stroke: black;
+    stroke-width: 1px;
+    opacity: 25%;
+}
+
+[class=version_node] {
+    fill: red;
+    stroke: white;
+    stroke-width: 1px;
+}
+
+[class=mid_node] {
+    fill: black;
+    stroke: black;
+    stroke-width: 1px;
+    opacity: 85%;
+}
+
+[class=head_node] {
+    fill: green;
+    stroke: black;
+    stroke-width: 1px;
+}
+
+[class=tail_node] {
+    fill: red;
+    stroke: black;
+    stroke-width: 1px;
+}
+
+[class=operational_node] {
+    fill: aqua;
+    stroke: black;
+    stroke-width: 1px;
+}
+
+[class=dynamic_node] {
+    fill: yellow;
+    stroke: black;
+    stroke-width: 1px;
+}
+
+[class=version_text] {
+    fill: white;
+    font-size: 15px;
+}
+
+[class=graph_text] {
+    fill: black;
+    font-size: 15px;
+}
