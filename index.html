@@ -16,7 +16,7 @@
         <svg id="secondary_svg"></svg>
     </div>
     <div>
-        <p class="help_text">
+        <p id="help_text">
             Here is some text.
         </p>
     </div>
@@ -39,8 +39,10 @@
 
     <button id="debug" onclick="Debug()"> Debug </button>
 
-    <button id="step-by-step" onclick="ActivateStep()"> ActivateStep </button>
+    <button id="step_by_step_on" onclick="step_by_step_is_active = true"> ActivateStep </button>
+    <button id="step_by_step_off" onclick="step_by_step_is_active = false"> DeactivateStep </button>
 
+    <button id="ns" onclick="next_step_required = true"> Next step </button>
 <script>
     Setup();
 </script>

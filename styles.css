@@ -71,7 +71,7 @@
     font-size: 15px;
 }
 
-[class=help_text] {
+[id=help_text] {
     border-width:3px;
     border-style:solid;
     border-color:#287EC7;

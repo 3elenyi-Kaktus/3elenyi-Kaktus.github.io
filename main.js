@@ -56,7 +56,9 @@ let sec_zoom;
 
 
 
+let simulation_time = 3000; // ms
 let is_updating_layout = false;
+let step_by_step_is_active = false;
 let next_step_required = false;
 let chosen_version = -1;
 const linkStr = 0.1;
@@ -160,8 +162,8 @@ async function Push(version_num = -1) {
     let parent_version = _versions[version_num];
     console.log(`Parent version: ${version_num}`)
 
-    let x_coord = _main_nodes[parent_version.tail].x - 30;
-    let y_coord = _main_nodes[parent_version.tail].y - 30;
+    let x_coord = _main_nodes[parent_version.tail].x - 30 - GetRandomInt(5);
+    let y_coord = _main_nodes[parent_version.tail].y - 30 - GetRandomInt(5);
     _main_nodes.push(new Node(parent_version.tail, _main_nodes.length, overall_id++, x_coord, y_coord));
     let new_node = _main_nodes.length - 1;
 
@@ -179,13 +181,24 @@ async function Push(version_num = -1) {
     let operational_list_size = parent_version.operational_list_size;
     let dynamic_list_size = parent_version.dynamic_list_size;
     _versions.push(new Version(first_el, last_el, operational_list, dynamic_list, size, operational_list_size, dynamic_list_size, _versions.length, _versions.length, version_num, x_coord, y_coord));
-    ChangeDynamicList(_versions[_versions.length - 1]);
+
+    if (step_by_step_is_active) {
+        await UpdateMainLayout__NoPhysics();
+        await UpdateVersionsLayout__NoPhysics();
+        GetNextStepText("push_new_node", new_node);
+        await WaitForNextStep();
+    }
+
+
+    await ChangeDynamicList(_versions[_versions.length - 1]);
+
+
 
 
     console.log('Push made successfully');
     await UpdateLayout();
 }
-function Pop(version_num = -1) {
+async function Pop(version_num = -1) {
     StopUpdatingLayout();
     console.log(`Pop called.`);
     if (version_num === -1) {
@@ -229,14 +242,22 @@ function Pop(version_num = -1) {
     let operational_list_size = version.operational_list_size - 1;
     let dynamic_list_size = version.dynamic_list_size;
     _versions.push(new Version(first_el, last_el, operational_list, dynamic_list, size, operational_list_size, dynamic_list_size, _versions.length, _versions.length, version_num, x_coord, y_coord));
-    ChangeDynamicList(_versions.at(-1));
+    await ChangeDynamicList(_versions.at(-1));
 
     console.log('Pop made successfully');
-    UpdateVersionsLayout();
-    console.log(`Version layout ended.`);
+    await UpdateLayout();
 }
-function ListsExchange(version) {
+async function ListsExchange(version) {
+    if (step_by_step_is_active) {
+        GetNextStepText("check_lists_swap");
+        await WaitForNextStep();
+    }
     if (version.dynamic_list !== null && _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id === version.head) {
+        if (step_by_step_is_active) {
+            GetNextStepText("lists_swap_needed");
+            await WaitForNextStep();
+        }
+
         console.log('Dynamic and operational lists swapped.');
         version.operational_list = version.dynamic_list;
         version.operational_list_size = version.dynamic_list_size;
@@ -244,11 +265,38 @@ function ListsExchange(version) {
         version.dynamic_list_size = 0;
         return true;
     }
+    if (step_by_step_is_active) {
+        GetNextStepText("lists_swap_ok");
+        await WaitForNextStep();
+    }
     return false;
 }
-function ChangeDynamicList(version) {
+async function ChangeDynamicList(version) {
+    if (step_by_step_is_active) {
+        GetNextStepText("check_list_size");
+        await WaitForNextStep();
+    }
+
+
     let curr_version_nodes_size = Math.max(0, version.size - 2);
-    if (version.operational_list_size * 2 < curr_version_nodes_size && !ListsExchange(version)) {
+    if (version.operational_list_size * 2 < curr_version_nodes_size) {
+        if (step_by_step_is_active) {
+            GetNextStepText("list_size_needs_remaster", version.operational_list_size);
+            await WaitForNextStep();
+        }
+        if (await ListsExchange(version)) {
+            if (step_by_step_is_active) {
+                GetNextStepText("swap_success", version.operational_list_size);
+                await WaitForNextStep();
+            }
+            return;
+        }
+        if (step_by_step_is_active) {
+            GetNextStepText("swap_failure", version.operational_list_size);
+            await WaitForNextStep();
+        }
+
+
         let targeted_main_node;
         if (version.dynamic_list !== null) {
             targeted_main_node = _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id;
@@ -257,14 +305,19 @@ function ChangeDynamicList(version) {
         }
         console.log(`New dynamic node created. Target node id: ${targeted_main_node}`);
 
+        if (step_by_step_is_active) {
+            GetNextStepText("add_new_dynamic_node", targeted_main_node);
+            await WaitForNextStep();
+        }
+
         let next_list;
         if (version.dynamic_list !== null) {
             next_list = version.dynamic_list;
         } else {
             next_list = 0;
         }
-        let x_coord = _dynamic_nodes[next_list].x - 30;
-        let y_coord = _dynamic_nodes[next_list].y - 30;
+        let x_coord = _dynamic_nodes[next_list].x - 30 - GetRandomInt(5);
+        let y_coord = _dynamic_nodes[next_list].y - 30 - GetRandomInt(5);
         _dynamic_nodes.push(new ListNode(next_list, targeted_main_node, _dynamic_nodes.length, targeted_main_node, x_coord, y_coord));
 
 
@@ -280,7 +333,12 @@ function ChangeDynamicList(version) {
 
         version.dynamic_list = _dynamic_nodes.length - 1;
         ++version.dynamic_list_size;
-        ListsExchange(version);
+        await ListsExchange(version);
+        return;
+    }
+    if (step_by_step_is_active) {
+        GetNextStepText("list_size_ok", version.operational_list_size);
+        await WaitForNextStep();
     }
 }
 
@@ -294,6 +352,9 @@ function sleep(ms) {
 }
 function isNum(value) {
     return /^(-?[0-9]+)$/.test(value);
+}
+function GetRandomInt(max_value) {
+    return Math.floor(Math.random() * max_value);
 }
 /*function ToStack() {
     document.getElementById("main_page").hidden = true;
@@ -337,6 +398,12 @@ function Debug() {
     Push(12).then();
     Push(11).then();
     Push(14).then();
+}
+async function WaitForNextStep() {
+    while (!next_step_required) {
+        await sleep(10);
+    }
+    next_step_required = false;
 }
 
 
@@ -455,6 +522,14 @@ function UpdateVersionsLayout() {
 
     ver_sim
         .restart();
+}
+function StopUpdatingVersionsLayout() {
+    ver_sim.stop();
+}
+async function UpdateVersionsLayout__NoPhysics() {
+    UpdateVersionsLayout();
+    await sleep(10);
+    StopUpdatingVersionsLayout();
 }
 
 function SetupMainSVG() {
@@ -600,6 +675,14 @@ function UpdateMainLayout() {
         .alpha(0.5)
         .alphaTarget(0.3)
         .restart();
+}
+function StopUpdatingMainLayout() {
+    simulation.stop();
+}
+async function UpdateMainLayout__NoPhysics() {
+    UpdateMainLayout();
+    await sleep(1);
+    StopUpdatingMainLayout();
 }
 
 function SetupSecondarySVG() {
@@ -769,7 +852,7 @@ async function UpdateLayout() {
     console.log(`Started secondary layout`);
     UpdateSecondaryLayout();
     console.log(`Ended secondary layout`);
-    await sleep(7000);
+    await sleep(simulation_time);
     StopUpdatingLayout();
     console.log(`Ended reshaping layout`);
 }
@@ -777,13 +860,16 @@ function StopUpdatingLayout() {
     if (is_updating_layout) {
         simulation.stop();
         sec_sim.stop();
+        ver_sim.stop();
         is_updating_layout = false;
     }
 }
 
 
 
-async function VersionClick() {
+
+
+async function VersionClick(update_layout = true) {
     StopUpdatingLayout();
     console.log(`Version ${this.id} was clicked.`);
     let version = _versions[this.id];
@@ -892,9 +978,57 @@ async function VersionClick() {
 
 
     console.log(`Parameters were reassigned.`);
-    await UpdateLayout();  //TODO необязательная штука, перестраивает все поле снова
+    if (update_layout) {
+        await UpdateLayout();
+    }
 }
-
+function GetNextStepText() {
+    let option = arguments[0];
+    switch (option) {
+        case "push_new_node":
+            document.getElementById('help_text').innerHTML =
+                `We push new node ${arguments[1]} to the main tree.`;
+            break
+        case "check_list_size":
+            document.getElementById('help_text').innerHTML =
+                `Now we compare new list size with operational (blue) list size.`;
+            break
+        case "list_size_ok":
+            document.getElementById('help_text').innerHTML =
+                `Operational list size is ${arguments[1]}, which is more or equal to 1/2 of a list size.\n
+                Nothing changes.`;
+            break
+        case "list_size_needs_remaster":
+            document.getElementById('help_text').innerHTML =
+                `Operational list size is ${arguments[1]}, which is less than 1/2 of a list size.\n
+                Now we check if we can swap operational and dynamic lists (in case, previous pop gave us possibility to do so).`;
+            break
+        case "swap_success":
+            document.getElementById('help_text').innerHTML =
+                `We successfully swapped lists, no need in adding new nodes.`;
+            break
+        case "swap_failure":
+            document.getElementById('help_text').innerHTML =
+                `We couldn't swap lists, so we need to add new dynamic node.`;
+            break
+        case "check_lists_swap":
+            document.getElementById('help_text').innerHTML =
+                `Now we check if dynamic list reached list head.`;
+            break
+        case "lists_swap_ok":
+            document.getElementById('help_text').innerHTML =
+                `Dynamic list didn't reach list head, nothing changes.`;
+            break
+        case "lists_swap_needed":
+            document.getElementById('help_text').innerHTML =
+                `Dynamic list reached list head, we now treat dynamic list as operational (e.g. swap them).`;
+            break
+        case "add_new_dynamic_node":
+            document.getElementById('help_text').innerHTML =
+                `We create new dynamic node, as a parent for previous one, now it points to ${arguments[1]} node in the main tree.`;
+            break
+    }
+}
 
 
 
