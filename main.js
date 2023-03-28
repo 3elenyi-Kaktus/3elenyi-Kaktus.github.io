@@ -40,7 +40,7 @@ let ver_height = 50;
 let svg;
 let simulation;
 let width = 900; // = window.innerWidth;
-let height = 650; // = window.innerHeight;
+let height = 500; // = window.innerHeight;
 let linkForce;
 let overall_id = 1;
 let zoom;
@@ -50,14 +50,14 @@ let zoom;
 let sec_svg;
 let sec_sim;
 let sec_width = 700;
-let sec_height = 650;
+let sec_height = 500;
 let sec_linkForce;
-let sec_overall_id = 1;
 let sec_zoom;
 
 
 
 let is_updating_layout = false;
+let next_step_required = false;
 let chosen_version = -1;
 const linkStr = 0.1;
 
@@ -75,19 +75,17 @@ class Link {
     strength;
 }
 class Node {
-    constructor(son = null, value = null, id = null, label = null, x = 0, y = 0) {
+    constructor(son = null, id = null, label = null, x = 0, y = 0) {
         this.son_id = son;
-        this.value = value;
         this.id = id;
         this.label = label;
         this.x = x;
         this.y = y;
     }
-//Algorythmic
+//Algorithmic
     son_id;
-    value;
 //Visual
-    id;
+    id; // == value
     label;
     x;
     y;
@@ -101,7 +99,7 @@ class ListNode {
         this.x = x;
         this.y = y;
     }
-//Algorythmic
+//Algorithmic
     next_list;
     target_node;
 //Visual
@@ -126,7 +124,7 @@ class Version {
         this.x = x;
         this.y = y;
     }
-//Algorythmic
+//Algorithmic
     head;
     tail;
     operational_list;
@@ -142,14 +140,14 @@ class Version {
     y;
 }
 
-async function Push(version_num = -1, value = -1) {
+
+async function Push(version_num = -1) {
     StopUpdatingLayout();
     console.log(`Push called.`);
     if (version_num === -1) {
         let x = document.getElementById('push_form');
-        value = x.push_value.value;
         version_num = x.push_version.value;
-        if (!isNum(value) || !isNum(version_num)) {
+        if (!isNum(version_num)) {
             console.log('Invalid input format.');
             return;
         }
@@ -164,7 +162,7 @@ async function Push(version_num = -1, value = -1) {
 
     let x_coord = _main_nodes[parent_version.tail].x - 30;
     let y_coord = _main_nodes[parent_version.tail].y - 30;
-    _main_nodes.push(new Node(parent_version.tail, value, _main_nodes.length, overall_id++, x_coord, y_coord));
+    _main_nodes.push(new Node(parent_version.tail, _main_nodes.length, overall_id++, x_coord, y_coord));
     let new_node = _main_nodes.length - 1;
 
 
@@ -202,7 +200,7 @@ function Pop(version_num = -1) {
     console.log(`Parent version: ${version_num}.`)
 
     let version = _versions[version_num];
-    let pop_value = _main_nodes[version.head].value;
+    let pop_value = _main_nodes[version.head].id;
     console.log(pop_value);
     let x_coord, y_coord;
     if (version.size === 1) {
@@ -324,21 +322,21 @@ function HandleZoom(e) {
         .attr('transform', e.transform);
 }
 function Debug() {
-    Push(0, 1).then();
-    Push(1, 2).then();
-    Push(2, 3).then();
-    Push(3, 4).then();
-    Push(4, 5).then();
-    Push(5, 6).then();
-    Push(5, 7).then();
-    Push(5, 8).then();
-    Push(5, 9).then();
-    Push(6, 10).then();
-    Push(10, 11).then();
-    Push(7, 12).then();
-    Push(12, 13).then();
-    Push(11, 14).then();
-    Push(14, 15).then();
+    Push(0).then();
+    Push(1).then();
+    Push(2).then();
+    Push(3).then();
+    Push(4).then();
+    Push(5).then();
+    Push(5).then();
+    Push(5).then();
+    Push(5).then();
+    Push(6).then();
+    Push(1).then();
+    Push(7).then();
+    Push(12).then();
+    Push(11).then();
+    Push(14).then();
 }
 
 
@@ -753,7 +751,7 @@ function UpdateSecondaryLayout() {
 
 function Setup() {
     _versions.push(new Version(0, 0, null, null, 0, 0, 0, 0, 'Sv', null, 25, 25));
-    _main_nodes.push(new Node(null, null, 0, 'Sm', 40, 40));
+    _main_nodes.push(new Node(null, 0, 'Sm', 40, 40));
     _dynamic_nodes.push(new ListNode(null, null, 0, 'Sd', 40, 40));
 
     SetupVersionSVG();
@@ -896,7 +894,6 @@ async function VersionClick() {
     console.log(`Parameters were reassigned.`);
     await UpdateLayout();  //TODO необязательная штука, перестраивает все поле снова
 }
-
 
 
 

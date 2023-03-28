@@ -15,14 +15,16 @@
         <svg id="main_svg"></svg>
         <svg id="secondary_svg"></svg>
     </div>
-
+    <div>
+        <p class="help_text">
+            Here is some text.
+        </p>
+    </div>
 
 
     <form id="push_form" onsubmit="return false">
-        <label for="push_value">Push </label>
-        <input type="text" id="push_value" name="push_value" size="7">
-        <label for="push_version"> to version </label>
-        <input type="text" id="push_version" name="push_version" size="7">
+        <label for="push_version">Push new element to version </label>
+        <input type="text" id="push_version" name="push_version" size="3">
         <label> of stack. </label>
         <button onclick="Push()">Push</button>
     </form>
