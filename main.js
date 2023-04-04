@@ -8,7 +8,6 @@
 //TODO
 //TODO
 //TODO
-//TODO
 
 let _main_nodes = []
 let _links = []
@@ -198,7 +197,7 @@ async function Push(version_num = -1) {
 
 
     if (step_by_step_is_active) {
-        GetNextStepText("ended_pushing", version_num);
+        GetNextStepText("ended_pushing");
         await WaitForNextStep();
         ReturnFromStepByStepLayout();
     }
@@ -332,7 +331,11 @@ async function Pop(version_num = -1) {
 }
 async function ListsExchange(version) {
     if (step_by_step_is_active) {
-        GetNextStepText("check_lists_swap", version.head, _dynamic_nodes[version.dynamic_list].label, _dynamic_nodes[version.dynamic_list].target_node, _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id);
+        if (version.dynamic_list === null) {
+            GetNextStepText("check_lists_swap_null")
+        } else {
+            GetNextStepText("check_lists_swap_", version.head, _dynamic_nodes[version.dynamic_list].label, _dynamic_nodes[version.dynamic_list].target_node, _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id);
+        }
         await WaitForNextStep();
     }
 
@@ -381,14 +384,14 @@ async function ChangeDynamicList(version) {
 
     if (await ListsExchange(version)) {
         if (step_by_step_is_active) {
-            GetNextStepText("swap_success", version.operational_list_size);
+            GetNextStepText("swap_success");
             await WaitForNextStep();
         }
         return;
     }
 
     if (step_by_step_is_active) {
-        GetNextStepText("swap_failure", version.operational_list_size);
+        GetNextStepText("swap_failure");
         await WaitForNextStep();
     }
 
@@ -1231,7 +1234,12 @@ function GetNextStepText() {
                 `We couldn't swap lists, so we need to create new additional dynamic list node.\n`;
             break
 
-        case "check_lists_swap":
+        case "check_lists_swap_null":
+            text.innerHTML =
+                `We check if dynamic list reached corresponding version head.\n
+                In our case, dynamic list is a NULL.\n`;
+            break
+        case "check_lists_swap_":
             text.innerHTML =
                 `We check if dynamic list reached corresponding version head.\n
                 In our case, version head is node ${arguments[1]}.\n
