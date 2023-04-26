@@ -8,6 +8,12 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <label id="locale_switcher_label" for="locale_switcher"> Select locale: </label>
+    <select id="locale_switcher" name="locale_switcher">
+        <option value="en" selected> English </option>
+        <option value="ru"> Русский </option>
+    </select>
+
     <div>
         <svg id="versions_svg"></svg>
     </div>
@@ -23,27 +29,29 @@
 
 
     <form id="push_form" onsubmit="return false">
-        <label for="push_version">Push new element to version </label>
+        <label id="push_version_label" for="push_version"> Push new element to specific version: </label>
         <input type="text" id="push_version" name="push_version" size="3">
-        <label> of stack. </label>
-        <button onclick="Push()">Push</button>
+        <button id="push_button" onclick="Push()"> Push </button>
     </form>
 
     <form id="pop_form" onsubmit="return false">
-        <label for="pop_version">Pop last value from version </label>
+        <label id="pop_version_label" for="pop_version"> Pop last value from specific version: </label>
         <input type="text" id="pop_version" name="pop_version" size="7">
-        <label>version of stack. </label>
-        <button id="pop" onclick="Pop()"> Pop from version</button>
+        <button id="pop_button" onclick="Pop()"> Pop </button>
     </form>
 
+    <div id="step_by_step_cont">
+        <input type="checkbox" id="step_by_step_toggle_checkbox" name="step_by_step_toggle_checkbox">
+        <label id="step_by_step_toggle_checkbox_label" for="step_by_step_toggle_checkbox"> Activate Step-by-Step </label>
+    </div>
 
-    <button id="debug" onclick="Debug()"> Debug </button>
+    <button id="debug_button" onclick="Debug()"> Debug </button>
 
-    <button id="step_by_step_toggle" onclick="ToggleStepByStep()"> ActivateStep </button>
+    <button id="update_layout_button" onclick="UpdateLayout()"> Update Layout </button>
 
-    <button id="update_layout" onclick="UpdateLayout()"> Update Layout </button>
+    <button id="next_step_button" onclick="NextStep()" hidden="hidden"> Next step </button>
 
-    <button id="next_step" onclick="NextStep()" hidden="hidden"> Next step </button>
+
 <script>
     Setup();
 </script>

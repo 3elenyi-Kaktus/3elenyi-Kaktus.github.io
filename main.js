@@ -22,7 +22,7 @@ let _versions = [];
 
 let ver_svg;
 let ver_sim;
-let ver_width = 1500;
+let ver_width = 1800;
 let ver_height = 50;
 
 
@@ -49,6 +49,261 @@ let step_by_step_is_active = false;
 let next_step_required = false;
 let chosen_version = -1;
 const linkStr = 0.1;
+
+let locales = ['en', 'ru'];
+let chosen_locale = 'en';
+let text_container_en = new Map([
+    ['click_on_old_version_push',
+        'We want to push new node to version {1}.'],
+
+    ['push_new_node',
+        'We simply copy new version from the chosen one and link our new node {1} to the tail of this version in main tree.\n' +
+        'Now new version tail has changed.'],
+
+    ['check_list_size',
+        'We compare new number of untracked nodes (black nodes in queue body) with corresponding operational list size (blue nodes).'],
+
+    ['list_size_ok',
+        'Operational list size is {1}, which is more or equal to 1/2 of the number of untracked nodes.\n' +
+        'Nothing needs to be changed.'],
+
+    ['list_size_needs_remaster',
+        'Operational list size is {1}, which is less than 1/2 of the number of untracked nodes.\n' +
+        'We check if it\'s possible to swap operational and dynamic lists (in case, previous pop gave us possibility to do so).'],
+
+    ['swap_success',
+        'We successfully swapped lists, now dynamic list is empty.\n' +
+        'Nothing else needs to be done.'],
+
+    ['swap_failure',
+        'We couldn\'t swap lists, so we need to create new additional dynamic list node.'],
+
+    ['check_lists_swap_null',
+        'We check if dynamic list reached corresponding version head.\n' +
+        'In our case, dynamic list is a NULL.'],
+
+    ['check_lists_swap_',
+        'We check if dynamic list reached corresponding version head.\n' +
+        'In our case, version head is node {1}.\n' +
+        'We perform following operations:\n' +
+        '1) Get dynamic list node - it\'s node {2}.\n' +
+        '2) Get it\'s targeted node in main tree - it\'s node {3}.\n' +
+        '3) Get targeted node son - it\'s node {4}'],
+
+    ['lists_swap_ok',
+        'Dynamic list didn\'t reach list head, nothing changes.'],
+
+    ['lists_swap_needed',
+        'We got the same nodes, that means dynamic list reached list head.\n' +
+        'So we treat dynamic list as operational (e.g. swap them).'],
+
+    ['define_targeted_node_1',
+        'To do so, we need to define targeted node in main tree and son in dynamic tree.\n' +
+        'As for the targeted node in main tree, we make following operations:\n' +
+        '1) Get current dynamic list node - it\'s node {1}.\n' +
+        '2) Get from it targeted node in main tree - it\'s node {2}.\n' +
+        '3) Get from targeted node it\'s son - node {3}.\n' +
+        'So, now we know the first node for creating new dynamic node.\n ' +
+        'The second node could be simply found, because current dynamic list node (node {1}) will do.'],
+
+    ['define_targeted_node_2',
+        'To do so, we need to define targeted node in main tree and son in dynamic tree.\n' +
+        'As for the targeted node in main tree, we just need to get son of the tail node:\n' +
+        '1) Current tail is node {1}.\n' +
+        '2) We get it\'s son - node {2}.\n' +
+        'So, now we know the first node for creating new dynamic node.\n' +
+        'Because we didn\'t have a dynamic list for previous version, new dynamic node son points to NULL.'],
+
+    ['add_new_dynamic_node',
+        'This way, we created new dynamic node, as a parent for previous one.\n' +
+        'Let\'s add it to the tree.'],
+
+    ['try_swap_again',
+        'We need to try swapping operational and dynamic lists again.'],
+
+    ['ended_pushing',
+        'We ended pushing to our chosen version!'],
+
+    ['click_on_old_version_pop',
+        'We want to pop node from version {1}.\n' +
+        'Let\'s select this version.'],
+
+    ['define_node_to_pop',
+        'Our head points at node {1}, so we want to pop it.'],
+
+    ['pop_node_list_size_1',
+        'We have only 1 node in our queue, so we can simply reset our pointers to head and tail to NULL.\n' +
+        'Basically, our new version equals to starting N version.'],
+
+    ['pop_node_list_size_2',
+        'We have only 2 nodes in our queue, so we can simply change our head-pointer to tail-pointer.'],
+
+    ['define_new_head_1',
+        'We want to define, which node will be next head.\n' +
+        'Since we have more than 2 nodes in queue, we can\'t do it straightforwardly.\n' +
+        'So we will refer to our operational list.\n' +
+        'This version operational pointer refers to node {1} in operational list.'],
+
+    ['define_new_head_2',
+        'In return, this operational node has two important parameters:\n' +
+        '1) next operational node (it\'s son) - node {1},\n' +
+        '2) targeted main queue node - node {2} in main tree.'],
+
+    ['pop_node',
+        'So now we know, how to create new version. We simply copy new version from the chosen one.\n' +
+        'Then, we change head-pointer and operational list pointer to nodes, at which current operational list node points to accordingly.'],
+
+    ['rebuild_dynamic_list',
+        'The only thing, that still needs changes is our dynamic list.\n' +
+        'Let\'s rebuild it, if it needs changes.'],
+
+    ['ended_popping',
+        'We ended popping from our chosen version!'],
+]);
+let text_container_ru = new Map([
+    ['click_on_old_version_push',
+        'Мы хотим добавить новую вершину к версии {1}.'],
+
+    ['push_new_node',
+        'Нам достаточно скопировать в новую версию всю информацию от старой и привязать новую вершину {1} к \'хвосту\' этой версии в главном графе.\n' +
+        'Теперь у новой версии изменился \'хвост\'.'],
+
+    ['check_list_size',
+        'Мы сравниваем новое количество неотслеживаемых вершин (выделены черным цветом) с размером соответствующего операционного списка (выделен голубым цветом).'],
+
+    ['list_size_ok',
+        'Размер операционного списка - {1}, что больше или равно 1/2 от количества неотслеживаемых вершин.\n' +
+        'Нет необходимости в изменениях.'],
+
+    ['list_size_needs_remaster',
+        'Размер операционного списка - {1}, что меньше чем 1/2 от количества неотслеживаемых вершин.\n' +
+        'Проверим, можно ли поменять местами операционный и динамический списки (в случае, если предыдущее удаление вершины дало нам такое возможность).'],
+
+    ['swap_success',
+        'Мы успешно поменяли списки местами, теперь динамический список пуст.\n' +
+        'Больше ничего менять не нужно.'],
+
+    ['swap_failure',
+        'Мы не смогли поменять местами списки, поэтому необходимо создать новую вершину для динамического листа.'],
+
+    ['check_lists_swap_null',
+        'Проверим, достиг ли динамический список \'головы\' текущей версии.\n' +
+        'В нашем случае, динамический список отсутствует.'],
+
+    ['check_lists_swap_',
+        'Проверим, достиг ли динамический список \'головы\' текущей версии.\n' +
+        'В нашем случае \'голова\' текущей версии - вершина {1}.\n' +
+        'Проведём следующие операции:\n' +
+        '1) Получим ведущую вершину динамического списка - это вершина {2}.\n' +
+        '2) Из нее узнаем, на какую вершину она указывает в главном графе - это вершина {3}.\n' +
+        '3) Осталось только получить сына этой вершины - вершину {4}'],
+
+    ['lists_swap_ok',
+        'Динамический список не достиг \'головы\' текущей версии, ничего не происходит.'],
+
+    ['lists_swap_needed',
+        'Мы получили одинаковые вершины, это значит что динамический список достиг \'головы\' текущей версии.\n' +
+        'Поэтому, теперь мы принимаем динамический список за операционный (меняем их местами).'],
+
+    ['define_targeted_node_1',
+        'Чтобы это сделать, нам необходимо определить целевую вершину в главном графе и сына в динамическом списке.\n' +
+        'Вторую мы уже знаем, так как сейчас ведущая вершина динамического списка - {1}.\n' +
+        'Для нахождения первой нам необходимо выполнить следующие операции:\n' +
+        '1) Получить ведущую вершину динамического списка - это вершина {1}.\n' +
+        '2) Узнать из нее целевую вершину в главном графе - это вершина {2}.\n' +
+        '3) Из этой вершины получить ее сына - вершину {3}.\n' +
+        'Теперь, мы знаем необходимую целевую вершину для создания новой динамической вершины.'],
+
+    ['define_targeted_node_2',
+        'Чтобы это сделать, нам необходимо определить целевую вершину в главном графе и сына в динамическом списке.\n' +
+        'Первую вершину мы можем найти, просто взяв сына \'хвоста\' текущей версии:\n' +
+        '1) Текущий \'хвост\' - вершина {1}.\n' +
+        '2) Ее сын - вершина {2}.\n' +
+        'Теперь, мы знаем необходимую целевую вершину.\n' +
+        'Так как у нас нет динамического списка для текущей вершины, положим сына новой динамической вершины равным NULL.'],
+
+    ['add_new_dynamic_node',
+        'Таким образом, мы создали новую ведущую динамическую вершину.\n' +
+        'Добавим ее в граф.'],
+
+    ['try_swap_again',
+        'Снова попробуем поменять местами динамический и операционный списки местами.'],
+
+    ['ended_pushing',
+        'Мы успешно добавили вершину к выбранной версии!'],
+
+    ['click_on_old_version_pop',
+        'Мы хотим удалить вершину из версии {1}.\n' +
+        'Рассмотрим ее.'],
+
+    ['define_node_to_pop',
+        '\'Голова\' текущей версии - вершина {1}, поэтому мы хотим удалить именно ее.'],
+
+    ['pop_node_list_size_1',
+        'В нашей очереди только 1 вершина, поэтому достаточно обнулить указатели на \'голову\' и \'хвост\' новой версии на NULL.\n' +
+        'Проще говоря, новая версия теперь эквивалентна стартовой версии N.'],
+
+    ['pop_node_list_size_2',
+        'В нашей очереди есть только 2 вершины, поэтому достаточно в указатель на \'голову\' записать текущий указатель на \'хвост\'.'],
+
+    ['define_new_head_1',
+        'Мы хотим определить, какая вершина станет следующей \'головой\'.\n' +
+        'Так как у нас больше 2 вершин в очереди, мы не сможем это сделать напрямую.\n' +
+        'Поэтому, мы обратимся к операционномы списку текущей версии.\n' +
+        'Ведущая вершина этого списка - вершина {1}.'],
+
+    ['define_new_head_2',
+        'В свою очередь, эта операционная вершина владее 2 важными параметрами:\n' +
+        '1) следующая операционная вершина (ее сын) - вершина {1},\n' +
+        '2) целевая вершина в главной очереди - вершина {2} в главном графе.\n' +
+        'Нам потребуются оба этих параметра.'],
+
+    ['pop_node',
+        'Таким образом, мы знаем как создать новую версию. Сначала, скопируем новую версию из текущей.\n' +
+        'Потом изменим голову новой версии на целевую вершину, которую мы узнали на предыдущем шаге.\n' +
+        'Также изменим ведущую вершину операционного списка на сына текущей ведущей вершины.'],
+
+    ['rebuild_dynamic_list',
+        'Единственное, что осталось сделать - проверить, не нужно ли изменить динамический список.\n' +
+        'Перестроим его, если это необходимо.'],
+
+    ['ended_popping',
+        'Мы успешно удалили вершину из выбранной версии!'],
+]);
+let text_containers = new Map([
+    ['en', text_container_en],
+    ['ru', text_container_ru],
+]);
+
+let html_page_locale_en = new Map([
+    ['locale_switcher_label', 'Select locale:'],
+    ['help_text', 'Here is some text.'],
+    ['push_version_label', 'Push new element to specific version:'],
+    ['push_button', 'Push'],
+    ['pop_version_label', 'Pop last value from specific version:'],
+    ['pop_button', 'Pop'],
+    ['debug_button', 'Debug'],
+    ['step_by_step_toggle_checkbox_label', 'Activate step-by-step'],
+    ['update_layout_button', 'Update layout'],
+    ['next_step_button', 'Next step'],
+]);
+let html_page_locale_ru = new Map([
+    ['locale_switcher_label', 'Выберите язык:'],
+    ['help_text', 'Небольшой текст.'],
+    ['push_version_label', 'Добавить новую вершину к версии:'],
+    ['push_button', 'Добавить'],
+    ['pop_version_label', 'Удалить последнюю вершину из версии:'],
+    ['pop_button', 'Удалить'],
+    ['debug_button', 'Дебаг'],
+    ['step_by_step_toggle_checkbox_label', 'Пошаговая визуализация'],
+    ['update_layout_button', 'Обновить граф'],
+    ['next_step_button', 'Следующий шаг'],
+]);
+let html_page_containers = new Map([
+    ['en', html_page_locale_en],
+    ['ru', html_page_locale_ru],
+]);
+
 
 
 class Link {
@@ -514,15 +769,6 @@ async function WaitForNextStep() {
     }
     next_step_required = false;
 }
-function ToggleStepByStep() {
-    if (step_by_step_is_active) {
-        step_by_step_is_active = false;
-        document.getElementById('step_by_step_toggle').innerText = "Activate Step";
-    } else {
-        step_by_step_is_active = true;
-        document.getElementById('step_by_step_toggle').innerText = "Deactivate Step";
-    }
-}
 function NextStep() {
     if (step_by_step_is_active) {
         next_step_required = true
@@ -532,18 +778,18 @@ function NextStep() {
 function PrepareStepByStepLayout() {
     document.getElementById('push_form').hidden = true;
     document.getElementById('pop_form').hidden = true;
-    document.getElementById('debug').hidden = true;
-    document.getElementById('step_by_step_toggle').hidden = true;
-    document.getElementById('update_layout').hidden = true;
-    document.getElementById('next_step').hidden = false;
+    document.getElementById('debug_button').hidden = true;
+    document.getElementById('step_by_step_cont').hidden = true;
+    document.getElementById('update_layout_button').hidden = true;
+    document.getElementById('next_step_button').hidden = false;
 }
 function ReturnFromStepByStepLayout() {
     document.getElementById('push_form').hidden = false;
     document.getElementById('pop_form').hidden = false;
-    document.getElementById('debug').hidden = false;
-    document.getElementById('step_by_step_toggle').hidden = false;
-    document.getElementById('update_layout').hidden = false;
-    document.getElementById('next_step').hidden = true;
+    document.getElementById('debug_button').hidden = false;
+    document.getElementById('step_by_step_cont').hidden = false;
+    document.getElementById('update_layout_button').hidden = false;
+    document.getElementById('next_step_button').hidden = true;
 }
 
 function SetupVersionSVG() {
@@ -1018,7 +1264,10 @@ async function UpdateSecondaryLayout__NoPhysics() {
     StopUpdatingSecondaryLayout();
 }
 
-function Setup() {
+async function Setup() {
+    BindLocaleSwitcher();
+    BindStepByStepToggler();
+
     _versions.push(new Version(0, 0, null, null, 0, 0, 0, 0, 'N', null, 25, 25));
     _main_nodes.push(new Node(null, 0, 'Null', 40, 40));
     _dynamic_nodes.push(new ListNode(null, null, 0, 'Null', 40, 40));
@@ -1026,7 +1275,32 @@ function Setup() {
     SetupVersionSVG();
     SetupMainSVG();
     SetupSecondarySVG();
+    await sleep(50);
+    is_updating_layout = true;
+    StopUpdatingLayout();
 }
+function BindLocaleSwitcher() {
+    let switcher = document.querySelector("[id=locale_switcher]");
+    switcher.onchange = (event) => {
+        SetLocale(event.target.value);
+    };
+}
+function SetLocale(new_locale) {
+    if (new_locale === chosen_locale) {
+        return;
+    }
+    chosen_locale = new_locale;
+    html_page_containers.get(chosen_locale).forEach((translation, id) => {
+        document.getElementById(id).innerText = translation;
+    });
+}
+function BindStepByStepToggler() {
+    let switcher = document.querySelector("[id=step_by_step_toggle_checkbox]");
+    switcher.onchange = (event) => {
+        step_by_step_is_active = !step_by_step_is_active;
+    };
+}
+
 async function UpdateLayout() {
     is_updating_layout = true;
     console.log(`Started updating version layout`);
@@ -1045,6 +1319,8 @@ function StopUpdatingLayout() {
         is_updating_layout = false;
     }
 }
+
+
 
 
 function VersionClick(click) {
@@ -1199,147 +1475,15 @@ function VersionClick(click) {
 function GetNextStepText() {
     let option = arguments[0];
     let text = document.getElementById('help_text');
-    switch (option) {
-        case "click_on_old_version_push":
-            text.innerHTML =
-                `We want to push new node to version ${arguments[1]}.`;
-            break
-        case "push_new_node":
-            text.innerHTML =
-                `We simply copy new version from the chosen one and link our new node ${arguments[1]} to the tail of this version in main tree.\n
-                Now new version tail has changed.`;
-            break
+    let sample = text_containers.get(chosen_locale).get(option);
 
-        case "check_list_size":
-            text.innerHTML =
-                `We compare new number of untracked nodes (black nodes in queue body) with corresponding operational list size (blue nodes)\n.`;
-            break
-        case "list_size_ok":
-            text.innerHTML =
-                `Operational list size is ${arguments[1]}, which is more or equal to 1/2 of the number of untracked nodes.\n
-                Nothing needs to be changed.`;
-            break
-        case "list_size_needs_remaster":
-            text.innerHTML =
-                `Operational list size is ${arguments[1]}, which is less than 1/2 of the number of untracked nodes.\n
-                We check if it's possible to swap operational and dynamic lists (in case, previous pop gave us possibility to do so).`;
-            break
-        case "swap_success":
-            text.innerHTML =
-                `We successfully swapped lists, now dynamic list is empty.\n
-                Nothing else needs to be done.\n`;
-            break
-        case "swap_failure":
-            text.innerHTML =
-                `We couldn't swap lists, so we need to create new additional dynamic list node.\n`;
-            break
-
-        case "check_lists_swap_null":
-            text.innerHTML =
-                `We check if dynamic list reached corresponding version head.\n
-                In our case, dynamic list is a NULL.\n`;
-            break
-        case "check_lists_swap_":
-            text.innerHTML =
-                `We check if dynamic list reached corresponding version head.\n
-                In our case, version head is node ${arguments[1]}.\n
-                We perform following operations:
-                1) Get dynamic list node - it's node ${arguments[2]}.\n
-                2) Get it's targeted node in main tree - it's node ${arguments[3]}.\n
-                3) Get targeted node son - it's node ${arguments[4]}`;
-            break
-        case "lists_swap_ok":
-            text.innerHTML =
-                `Dynamic list didn't reach list head, nothing changes.`;
-            break
-        case "lists_swap_needed":
-            text.innerHTML =
-                `We got the same nodes, that means dynamic list reached list head.\n
-                 So we treat dynamic list as operational (e.g. swap them).`;
-            break
-
-        case "define_targeted_node_1":
-            text.innerHTML =
-                `To do so, we need to define targeted node in main tree and son in dynamic tree.\n
-                As for the targeted node in main tree, we make following operations:\n
-                1) Get current dynamic list node - it's node ${arguments[1]}.
-                2) Get from it targeted node in main tree - it's node ${arguments[2]}.
-                3) Get from targeted node it's son - node ${arguments[3]}.
-                So, now we know the first node for creating new dynamic node.
-                The second node could be simply found, because current dynamic list node (node ${arguments[1]}) will do.\n`;
-            break
-        case "define_targeted_node_2":
-            text.innerHTML =
-                `To do so, we need to define targeted node in main tree and son in dynamic tree.\n
-                As for the targeted node in main tree, we just need to get son of the tail node:\n
-                1) Current tail is node ${arguments[1]}.
-                2) We get it's son - node ${arguments[2]}.
-                So, now we know the first node for creating new dynamic node.
-                Because we didn't have a dynamic list for previous version, new dynamic node son points to NULL.\n`;
-            break
-        case "add_new_dynamic_node":
-            text.innerHTML =
-                `This way, we created new dynamic node, as a parent for previous one.\n
-                Let's add it to the tree.\n`;
-            break
-        case "try_swap_again":
-            text.innerHTML =
-                `We need to try swapping operational and dynamic lists again.\n`;
-            break
-
-        case "ended_pushing":
-            text.innerHTML = `We ended pushing to our chosen version!`;
-            break
-
-
-
-        case "click_on_old_version_pop":
-            text.innerHTML =
-                `We want to pop node from version ${arguments[1]}.\n
-                Let's select this version.\n`;
-            break
-
-        case "define_node_to_pop":
-            text.innerHTML =
-                `Our head points at node ${arguments[1]}, so we want to pop it.\n`;
-            break
-        case "pop_node_list_size_1":
-            text.innerHTML =
-                `We have only 1 node in our queue, so we can simply reset our pointers to head and tail to NULL.\n
-                Basically, our new version equals to starting N version.\n`;
-            break
-        case "pop_node_list_size_2":
-            text.innerHTML =
-                `We have only 2 nodes in our queue, so we can simply change our head-pointer to tail-pointer.\n`;
-            break
-        case "define_new_head_1":
-            text.innerHTML =
-                `We want to define, which node will be next head.\n
-                 Since we have more than 2 nodes in queue, we can't do it straightforwardly.\n
-                 So we will refer to our operational list.\n
-                 This version operational pointer refers to node ${arguments[1]} in operational list.\n`;
-            break
-        case "define_new_head_2":
-            text.innerHTML =
-                `In return, this operational node has two important parameters:\n
-                1) next operational node (it's son) - node ${arguments[1]},\n
-                2) targeted main queue node - node ${arguments[2]} in main tree.\n`;
-            break
-        case "pop_node":
-            text.innerHTML =
-                `So now we know, how to create new version. We simply copy new version from the chosen one.\n
-                 Then, we change head-pointer and operational list pointer to nodes, at which current operational list node points to accordingly.\n`;
-            break
-        case "rebuild_dynamic_list":
-            text.innerHTML =
-                `The only thing, that still needs changes is our dynamic list.\n
-                Let's rebuild it, if it needs changes.\n`;
-            break
-
-        case "ended_popping":
-            text.innerHTML = `We ended popping from our chosen version!`;
-            break
-    }
+    text.innerHTML = sample.replace(/{(\d+)}/g, (match, index) => {
+        let needed_arg = Number(match.substring(1, match.length - 1));
+        if (arguments[needed_arg] === undefined) {
+            console.error('Missing parameters for main text.', sample, option);
+        }
+        return arguments[needed_arg];
+    });
 }
 
 
