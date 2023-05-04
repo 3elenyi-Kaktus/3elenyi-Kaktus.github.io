@@ -1,13 +1,8 @@
 //TODO
-//TODO
-//TODO
-//TODO
-//TODO
-//TODO
-//TODO
-//TODO
-//TODO
-//TODO
+// Вынести обработку номера версии в общую функцию, чтобы в случае чего не заходить в обработчики
+// Поправить остаточные баги по неправильной визуальной обработке картинки (некоторые ноды могут не подсвечиваться, хотя на самом деле присутствуют в формальной версии)
+// Поправить сохранение каждого состояния, кажется сейчас это не так эффективно
+
 
 let _main_nodes = []
 let _links = []
@@ -47,8 +42,13 @@ let simulation_time = 3000; // ms
 let is_updating_layout = false;
 let step_by_step_is_active = false;
 let next_step_required = false;
+let previous_step_required = false;
 let chosen_version = -1;
 const linkStr = 0.1;
+
+let is_first_swap = true;
+let is_push = true;
+
 
 let locales = ['en', 'ru'];
 let chosen_locale = 'en';
@@ -391,8 +391,117 @@ class Version {
     y;
 }
 
+class State {
+    constructor(args, function_call, old_sizes) {
+        console.warn("store old state");
+        if (_main_nodes.length !== old_sizes[0]) {
+            console.log("store new main node");
+            this.new_main_node = Object.assign({}, _main_nodes.at(-1));
+        }
+        if (_links.length !== old_sizes[1]) {
+            console.log("store new main link");
+            this.new_link = Object.assign({}, _links.at(-1));
+        }
+        if (_dynamic_nodes.length !== old_sizes[2]) {
+            console.log("store new dynamic node");
+            this.new_dynamic_node = Object.assign({}, _dynamic_nodes.at(-1));
+        }
+        if (_dynamic_links.length !== old_sizes[3]) {
+            console.log("store new dynamic link");
+            this.new_dynamic_link = Object.assign({}, _dynamic_links.at(-1));
+        }
+        if (_versions.length !== old_sizes[4]) {
+            console.log("store new version");
+            this.new_version = Object.assign({}, _versions.at(-1));
+        }
+
+        this.chosen_version = chosen_version;
+        this.is_first_swap = is_first_swap;
+        this.overall_id = overall_id;
+
+        this.args = JSON.parse(JSON.stringify(args));
+        this.function_call = function_call;
+    }
+
+    new_main_node = null;
+    new_link = null;
+    new_version = null;
+    new_dynamic_node = null;
+    new_dynamic_link = null;
+
+    chosen_version;
+    is_first_swap;
+    overall_id;
+
+    args;
+    function_call;
+
+    RestoreState(old_sizes) {
+        if (_main_nodes.length !== old_sizes[0] && this.new_main_node === null) {
+            _main_nodes.pop();
+        }
+        if (_links.length !== old_sizes[1] && this.new_link === null) {
+            console.log("pop main link");
+            _links.pop();
+        }
+        if (_dynamic_nodes.length !== old_sizes[2] && this.new_dynamic_node === null) {
+            console.log("pop dynamic node");
+            _dynamic_nodes.pop();
+        }
+        if (_dynamic_links.length !== old_sizes[3] && this.new_dynamic_link === null) {
+            console.log("pop dynamic link");
+            _dynamic_links.pop();
+        }
+        if (_versions.length !== old_sizes[4] && this.new_version === null) {
+            console.log("pop version");
+            _versions.pop();
+        }
+        if (this.new_main_node !== null) {
+            _main_nodes[_main_nodes.length - 1] = this.new_main_node;
+            console.log("changing last main node");
+        }
+        if (this.new_link !== null) {
+            _links[_links.length - 1] = this.new_link;
+            console.log("changing last main link");
+        }
+        if (this.new_dynamic_node !== null) {
+            _dynamic_nodes[_dynamic_nodes.length - 1] = this.new_dynamic_node;
+            console.log("changing last dynamic node");
+        }
+        if (this.new_dynamic_link !== null) {
+            _dynamic_links[_dynamic_links.length - 1] = this.new_dynamic_link;
+            console.log("changing last dynamic link");
+        }
+        if (this.new_version !== null) {
+            _versions[_versions.length - 1] = this.new_version;
+            console.log("changing last version");
+        }
+
+        chosen_version = this.chosen_version;
+        is_first_swap = this.is_first_swap;
+        overall_id = this.overall_id;
+        return [this.args, this.function_call];
+    }
+}
 
 async function Push(version_num = -1) {
+    if (step_by_step_is_active) {
+        is_push = true;
+        await OperationsCoordinator(version_num);
+    } else {
+        await Push__NoStepping(version_num)
+    }
+}
+async function Pop(version_num = -1) {
+    if (step_by_step_is_active) {
+        is_push = false;
+        await OperationsCoordinator(version_num);
+    } else {
+        await Pop__NoStepping(version_num)
+    }
+}
+
+async function Push__NoStepping(version_num) {
     StopUpdatingLayout();
 
     console.log(`Push called.`);
@@ -411,10 +520,6 @@ async function Push(version_num = -1) {
     }
     let parent_version = _versions[version_num];
     console.log(`Parent version: ${version_num}`)
-
-    if (step_by_step_is_active) {
-        PrepareStepByStepLayout();
-    }
 
     let x_coord = _main_nodes[parent_version.tail].x - 30 - GetRandomInt(5);
     let y_coord = _main_nodes[parent_version.tail].y - 30 - GetRandomInt(5);
@@ -436,32 +541,14 @@ async function Push(version_num = -1) {
     let dynamic_list_size = parent_version.dynamic_list_size;
     _versions.push(new Version(first_el, last_el, operational_list, dynamic_list, size, operational_list_size, dynamic_list_size, _versions.length, _versions.length, version_num, x_coord, y_coord));
 
-    if (step_by_step_is_active) {
-        GetNextStepText("click_on_old_version_push", version_num);
-        ver_svg.select('g.nodes').select("[id='" + version_num + "']").dispatch('click')
-        await WaitForNextStep();
-        await UpdateMainLayout__NoPhysics();
-        await UpdateVersionsLayout__NoPhysics();
-        ver_svg.select('g.nodes').select("[id='" + (_versions.length - 1) + "']").dispatch('click')
-        GetNextStepText("push_new_node", new_node);
-        await WaitForNextStep();
-    }
 
-
-    await ChangeDynamicList(_versions[_versions.length - 1]);
-
-
-    if (step_by_step_is_active) {
-        GetNextStepText("ended_pushing");
-        await WaitForNextStep();
-        ReturnFromStepByStepLayout();
-    }
+    await ChangeDynamicList__NoStepping(_versions[_versions.length - 1]);
 
 
     console.log('Push made successfully');
     await UpdateLayout();
 }
-async function Pop(version_num = -1) {
+async function Pop__NoStepping(version_num = -1) {
     StopUpdatingLayout();
 
     console.log(`Pop called.`);
@@ -481,43 +568,14 @@ async function Pop(version_num = -1) {
         return;
     }
 
-    if (step_by_step_is_active) {
-        PrepareStepByStepLayout();
-    }
-
     let pop_value = _main_nodes[version.head].id;
     console.log(pop_value);
     let x_coord = _versions.at(-1).x + 30;
     let y_coord = _versions.at(-1).y;
     ++overall_id;
 
-    if (step_by_step_is_active) {
-        GetNextStepText("click_on_old_version_pop", version_num);
-        await WaitForNextStep();
-
-        ver_svg.select('g.nodes').select("[id='" + version_num + "']").dispatch('click')
-        await WaitForNextStep();
-
-        GetNextStepText("define_node_to_pop", pop_value);
-        await WaitForNextStep();
-    }
-
     if (version.size === 1) {
         _versions.push(new Version(0, 0, null, null, 0, 0, 0, _versions.length, _versions.length, version_num, x_coord, y_coord));
-
-        if (step_by_step_is_active) {
-            GetNextStepText("pop_node_list_size_1", version.head);
-            await WaitForNextStep();
-
-            await UpdateVersionsLayout__NoPhysics();
-            ver_svg.select('g.nodes').select("[id='" + (_versions.length - 1) + "']").dispatch('click')
-            await WaitForNextStep();
-
-            GetNextStepText("ended_popping", version_num);
-            await WaitForNextStep();
-
-            ReturnFromStepByStepLayout();
-        }
 
         console.log('Pop made successfully');
         UpdateVersionsLayout();
@@ -526,20 +584,6 @@ async function Pop(version_num = -1) {
 
     if (version.size === 2) {
         _versions.push(new Version(version.tail, version.tail, null, null, 1, 0, 0, _versions.length, _versions.length, version_num, x_coord, y_coord));
-
-        if (step_by_step_is_active) {
-            GetNextStepText("pop_node_list_size_2", version.head);
-            await WaitForNextStep();
-
-            await UpdateVersionsLayout__NoPhysics();
-            ver_svg.select('g.nodes').select("[id='" + (_versions.length - 1) + "']").dispatch('click')
-            await WaitForNextStep();
-
-            GetNextStepText("ended_popping", version_num);
-            await WaitForNextStep();
-
-            ReturnFromStepByStepLayout();
-        }
 
         console.log('Pop made successfully');
         UpdateVersionsLayout();
@@ -555,116 +599,36 @@ async function Pop(version_num = -1) {
     let dynamic_list_size = version.dynamic_list_size;
     _versions.push(new Version(first_el, last_el, operational_list, dynamic_list, size, operational_list_size, dynamic_list_size, _versions.length, _versions.length, version_num, x_coord, y_coord));
 
-    if (step_by_step_is_active) {
-        GetNextStepText("define_new_head_1", _dynamic_nodes[version.operational_list].label);
-        await WaitForNextStep();
-
-        GetNextStepText("define_new_head_2", _dynamic_nodes[operational_list].label, first_el);
-        await WaitForNextStep();
-
-        GetNextStepText("pop_node");
-        await WaitForNextStep();
-
-        await UpdateVersionsLayout__NoPhysics();
-        ver_svg.select('g.nodes').select("[id='" + (_versions.length - 1) + "']").dispatch('click')
-        await WaitForNextStep();
-
-        GetNextStepText("rebuild_dynamic_list");
-        await WaitForNextStep();
-    }
-
-    await ChangeDynamicList(_versions.at(-1));
-
-    if (step_by_step_is_active) {
-        GetNextStepText("ended_popping", version_num);
-        await WaitForNextStep();
-        ReturnFromStepByStepLayout();
-    }
+    await ChangeDynamicList__NoStepping(_versions.at(-1));
 
     console.log('Pop made successfully');
     await UpdateLayout();
 }
-async function ListsExchange(version) {
-    if (step_by_step_is_active) {
-        if (version.dynamic_list === null) {
-            GetNextStepText("check_lists_swap_null")
-        } else {
-            GetNextStepText("check_lists_swap_", version.head, _dynamic_nodes[version.dynamic_list].label, _dynamic_nodes[version.dynamic_list].target_node, _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id);
-        }
-        await WaitForNextStep();
-    }
-
+async function ListsExchange__NoStepping(version) {
     if (version.dynamic_list !== null && _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id === version.head) {
         console.log('Dynamic and operational lists swapped.');
         version.operational_list = version.dynamic_list;
         version.operational_list_size = version.dynamic_list_size;
         version.dynamic_list = null;
         version.dynamic_list_size = 0;
-
-        if (step_by_step_is_active) {
-            GetNextStepText("lists_swap_needed");
-            await WaitForNextStep();
-            ver_svg.select('g.nodes').select("[id='" + (_versions.length - 1) + "']").dispatch('click');
-            ver_svg.select('g.nodes').select("[id='" + (_versions.length - 1) + "']").dispatch('click');
-            await WaitForNextStep();
-        }
         return true;
-    }
-
-    if (step_by_step_is_active) {
-        GetNextStepText("lists_swap_ok");
-        await WaitForNextStep();
     }
     return false;
 }
-async function ChangeDynamicList(version) {
-    if (step_by_step_is_active) {
-        GetNextStepText("check_list_size");
-        await WaitForNextStep();
-    }
-
+async function ChangeDynamicList__NoStepping(version) {
     let curr_version_nodes_size = Math.max(0, version.size - 2);
     if (version.operational_list_size * 2 >= curr_version_nodes_size) {
-        if (step_by_step_is_active) {
-            GetNextStepText("list_size_ok", version.operational_list_size);
-            await WaitForNextStep();
-        }
         return;
     }
-
-    if (step_by_step_is_active) {
-        GetNextStepText("list_size_needs_remaster", version.operational_list_size);
-        await WaitForNextStep();
-    }
-
-    if (await ListsExchange(version)) {
-        if (step_by_step_is_active) {
-            GetNextStepText("swap_success");
-            await WaitForNextStep();
-        }
+    if (await ListsExchange__NoStepping(version)) {
         return;
-    }
-
-    if (step_by_step_is_active) {
-        GetNextStepText("swap_failure");
-        await WaitForNextStep();
     }
 
     let targeted_main_node;
     if (version.dynamic_list !== null) {
         targeted_main_node = _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id;
-
-        if (step_by_step_is_active) {
-            GetNextStepText("define_targeted_node_1", _dynamic_nodes[version.dynamic_list].label, _dynamic_nodes[version.dynamic_list].target_node, _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id);
-            await WaitForNextStep();
-        }
     } else {
         targeted_main_node = _main_nodes[version.tail].son_id;
-
-        if (step_by_step_is_active) {
-            GetNextStepText("define_targeted_node_2", version.tail, _main_nodes[version.tail].son_id);
-            await WaitForNextStep();
-        }
     }
     console.log(`New dynamic node created. Target node id: ${targeted_main_node}`);
 
@@ -691,21 +655,317 @@ async function ChangeDynamicList(version) {
     version.dynamic_list = _dynamic_nodes.length - 1;
     ++version.dynamic_list_size;
 
-    if (step_by_step_is_active) {
-        GetNextStepText("add_new_dynamic_node");
-        await WaitForNextStep();
+    await ListsExchange__NoStepping(version);
+}
 
-        await UpdateSecondaryLayout__NoPhysics();
-        ver_svg.select('g.nodes').select("[id='" + (_versions.length - 1) + "']").dispatch('click');
-        ver_svg.select('g.nodes').select("[id='" + (_versions.length - 1) + "']").dispatch('click');
-        await WaitForNextStep();
+async function OperationsCoordinator(version_num) {
+    StopUpdatingLayout();
+    PrepareStepByStepLayout();
 
-        GetNextStepText("try_swap_again");
-        await WaitForNextStep();
+    is_first_swap = true;
+    let next_function_call;
+    if (is_push) {
+        next_function_call = PreparePush;
+    } else {
+        next_function_call = PreparePop;
+    }
+    let states = [];
+    let args = [version_num];
+    let old_size = [_main_nodes.length, _links.length, _dynamic_nodes.length, _dynamic_links.length, _versions.length]
+
+    let index = -2;
+    let action = "";
+    while (next_function_call !== "End") {
+        states[index + 2] = new State(args, next_function_call, old_size);
+        console.warn("Save st before fcall", next_function_call, "at ind", index + 2);
+        // if (action !== "prev") {
+            ++index;
+        // }
+        console.log("Calling ", next_function_call, args);
+        [next_function_call, args] = await next_function_call(args);
+        console.log("Next call ", next_function_call, args);
+        console.log(states);
+        action = await WaitForNextAction();
+        while (action === "prev") {
+            if (index < 0) {
+                action = await WaitForNextAction();
+            } else {
+                console.info("getting previous state ", states[index]);
+                [args, next_function_call] = states[index].RestoreState(old_size);
+                console.log("got state before calling ", next_function_call, " at ind ", index);
+                index -= 2;
+                await UpdateLayout__NoPhysics();
+                break;
+            }
+        }
     }
 
-    await ListsExchange(version);
+    ReturnFromStepByStepLayout();
+    await UpdateLayout();
 }
+
+async function PreparePush([version_num]) {
+    console.log(`Push called.`);
+    if (version_num === -1) {
+        let x = document.getElementById('push_form');
+        version_num = x.push_version.value;
+        if (!isNum(version_num)) {
+            console.log('Invalid input format.');
+            return;
+        }
+        if (Number(version_num) >= _versions.length) {
+            console.log('Invalid version number.');
+            return;
+        }
+        version_num = Number(version_num);
+    }
+    let parent_version = _versions[version_num];
+    console.log(`Parent version: ${version_num}`)
+
+    GetNextStepText("click_on_old_version_push", version_num);
+    ver_svg.select('g.nodes').select("[id='" + version_num + "']").dispatch('click');
+    return [AddMainNode, [parent_version, version_num]];
+}
+async function AddMainNode([parent_version, version_num]) {
+    let x_coord = _main_nodes[parent_version.tail].x - 30 - GetRandomInt(5);
+    let y_coord = _main_nodes[parent_version.tail].y - 30 - GetRandomInt(5);
+    _main_nodes.push(new Node(parent_version.tail, _main_nodes.length, overall_id++, x_coord, y_coord));
+    let new_node = _main_nodes.length - 1;
+
+    _links.push(new Link(_links.length, new_node, _main_nodes[new_node].son_id));
+
+    x_coord = _versions.at(-1).x + 32;
+    y_coord = _versions.at(-1).y;
+    let first_el = parent_version.head !== 0 ? parent_version.head : new_node;
+    let last_el = new_node;
+    let operational_list = parent_version.operational_list;
+    let dynamic_list = parent_version.dynamic_list;
+    let size = parent_version.size + 1;
+    let operational_list_size = parent_version.operational_list_size;
+    let dynamic_list_size = parent_version.dynamic_list_size;
+    _versions.push(new Version(first_el, last_el, operational_list, dynamic_list, size, operational_list_size, dynamic_list_size, _versions.length, _versions.length, version_num, x_coord, y_coord));
+
+    await UpdateMainLayout__NoPhysics();
+    await UpdateVersionsLayout__NoPhysics();
+    ver_svg.select('g.nodes').select("[id='" + (_versions.length - 1) + "']").dispatch('click')
+    GetNextStepText("push_new_node", new_node);
+    return [DefineDynamicListSize, [_versions.length - 1]];
+}
+
+async function DefineDynamicListSize([version_num]) {
+    let version = _versions[version_num];
+    let curr_version_nodes_size = Math.max(0, version.size - 2);
+    GetNextStepText("check_list_size");
+    return [CheckDynamicListSize, [version_num, curr_version_nodes_size]];
+}
+async function CheckDynamicListSize([version_num, curr_version_nodes_size]){
+    let version = _versions[version_num];
+    if (version.operational_list_size * 2 >= curr_version_nodes_size) {
+        GetNextStepText("list_size_ok", version.operational_list_size);
+        if (is_push) {
+            return [EndPushing, []];
+        }
+        return [EndPopping, []];
+    } else {
+        GetNextStepText("list_size_needs_remaster", version.operational_list_size);
+        return [CheckListsSwap, [version_num]];
+    }
+}
+async function CheckListsSwap([version_num]) {
+    let version = _versions[version_num];
+    if (version.dynamic_list === null) {
+        is_first_swap = false;
+        GetNextStepText("check_lists_swap_null");
+        return [TargetedNodeDefining, [version_num]];
+    } else {
+        GetNextStepText("check_lists_swap_", version.head, _dynamic_nodes[version.dynamic_list].label, _dynamic_nodes[version.dynamic_list].target_node, _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id);
+        return [ConfirmListsSwap, [version_num]];
+    }
+}
+async function ConfirmListsSwap([version_num]) {
+    let version = _versions[version_num];
+    if (version.dynamic_list !== null && _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id === version.head) {
+        console.log('Dynamic and operational lists swapped.');
+        version.operational_list = version.dynamic_list;
+        version.operational_list_size = version.dynamic_list_size;
+        version.dynamic_list = null;
+        version.dynamic_list_size = 0;
+
+        GetNextStepText("lists_swap_needed");
+        ver_svg.select('g.nodes').select("[id='" + (_versions.length - 1) + "']").dispatch('click');
+        ver_svg.select('g.nodes').select("[id='" + (_versions.length - 1) + "']").dispatch('click');
+        if (is_first_swap) {
+            is_first_swap = false;
+            return [FirstSwapSuccess, []];
+        }
+        if (is_push) {
+            return [EndPushing, []];
+        }
+        return [EndPopping, []];
+    }
+    if (is_first_swap) {
+        is_first_swap = false;
+        GetNextStepText("swap_failure");
+        return [TargetedNodeDefining, [version_num]];
+    }
+    GetNextStepText("lists_swap_ok");
+    if (is_push) {
+        return [EndPushing, []];
+    }
+    return [EndPopping, []];
+}
+async function FirstSwapSuccess() {
+    GetNextStepText("swap_success");
+    if (is_push) {
+        return [EndPushing, []];
+    }
+    return [EndPopping, []];
+}
+async function TargetedNodeDefining([version_num]) {
+    let targeted_main_node;
+    let version = _versions[version_num];
+    if (version.dynamic_list !== null) {
+        targeted_main_node = _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id;
+        GetNextStepText("define_targeted_node_1", _dynamic_nodes[version.dynamic_list].label, _dynamic_nodes[version.dynamic_list].target_node, _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id);
+    } else {
+        targeted_main_node = _main_nodes[version.tail].son_id;
+        GetNextStepText("define_targeted_node_2", version.tail, _main_nodes[version.tail].son_id);
+    }
+    return [NewDynamicNodeCreation, [version_num, targeted_main_node]];
+
+}
+async function NewDynamicNodeCreation([version_num, targeted_main_node]) {
+    let version = _versions[version_num];
+
+    console.log(`New dynamic node created. Target node id: ${targeted_main_node}`);
+
+    let next_list;
+    if (version.dynamic_list !== null) {
+        next_list = version.dynamic_list;
+    } else {
+        next_list = 0;
+    }
+    let x_coord = _dynamic_nodes[next_list].x - 30 - GetRandomInt(5);
+    let y_coord = _dynamic_nodes[next_list].y - 30 - GetRandomInt(5);
+    _dynamic_nodes.push(new ListNode(next_list, targeted_main_node, _dynamic_nodes.length, targeted_main_node, x_coord, y_coord));
+
+    let son_id;
+    if (version.dynamic_list !== null) {
+        son_id = version.dynamic_list;
+    } else {
+        son_id = 0;
+    }
+    console.log('Dynamic node son_id: ' + son_id);
+    _dynamic_links.push(new Link(_dynamic_links.length, _dynamic_nodes.length - 1, son_id));
+
+    version.dynamic_list = _dynamic_nodes.length - 1;
+    ++version.dynamic_list_size;
+
+    GetNextStepText("add_new_dynamic_node");
+    return [ShowNewDynamicNode, [version_num]];
+}
+async function ShowNewDynamicNode([version_num]) {
+    await UpdateSecondaryLayout__NoPhysics();
+    ver_svg.select('g.nodes').select("[id='" + (_versions.length - 1) + "']").dispatch('click');
+    ver_svg.select('g.nodes').select("[id='" + (_versions.length - 1) + "']").dispatch('click');
+    GetNextStepText("try_swap_again");
+    return [CheckListsSwap, [version_num]];
+}
+
+async function EndPushing() {
+    GetNextStepText("ended_pushing");
+    console.log('Push made successfully');
+    return ["End", []];
+}
+
+async function PreparePop([version_num]) {
+    console.log(`Pop called.`);
+    if (version_num === -1) {
+        let x = document.getElementById('pop_form');
+        version_num = x.pop_version.value;
+        if (Number(version_num) >= _versions.length) {
+            console.log('Invalid version number.');
+            return;
+        }
+        version_num = Number(version_num);
+    }
+    console.log(`Parent version: ${version_num}.`)
+    let version = _versions[version_num];
+    if (version.head === 0) {
+        console.log(`Can't pop from empty version`);
+        return;
+    }
+
+    let pop_value = _main_nodes[version.head].id;
+    console.log(pop_value);
+    ++overall_id;
+
+    GetNextStepText("click_on_old_version_pop", version_num);
+    ver_svg.select('g.nodes').select("[id='" + version_num + "']").dispatch('click')
+    return [DefineNodeToPop, [version_num, pop_value]];
+}
+async function DefineNodeToPop([version_num, pop_value]) {
+    let version = _versions[version_num];
+    GetNextStepText("define_node_to_pop", pop_value);
+    let x_coord = _versions.at(-1).x + 30;
+    let y_coord = _versions.at(-1).y;
+    if (version.size === 1) {
+        return [QueueSizeIs1, [version_num, x_coord, y_coord]];
+    }
+    if (version.size === 2) {
+        return [QueueSizeIs2, [version_num, x_coord, y_coord]];
+    }
+    return [QueueSizeNormal, [version_num, x_coord, y_coord]];
+}
+async function QueueSizeIs1([version_num, x_coord, y_coord]) {
+    let version = _versions[version_num];
+    _versions.push(new Version(0, 0, null, null, 0, 0, 0, _versions.length, _versions.length, version_num, x_coord, y_coord));
+    await UpdateVersionsLayout__NoPhysics();
+    ver_svg.select('g.nodes').select("[id='" + (_versions.length - 1) + "']").dispatch('click')
+    GetNextStepText("pop_node_list_size_1", version.head);
+    return [EndPopping, [version_num]];
+}
+async function QueueSizeIs2([version_num, x_coord, y_coord]) {
+    let version = _versions[version_num];
+    _versions.push(new Version(version.tail, version.tail, null, null, 1, 0, 0, _versions.length, _versions.length, version_num, x_coord, y_coord));
+    await UpdateVersionsLayout__NoPhysics();
+    ver_svg.select('g.nodes').select("[id='" + (_versions.length - 1) + "']").dispatch('click')
+    GetNextStepText("pop_node_list_size_2", version.head);
+    return [EndPopping, [version_num]];
+}
+async function QueueSizeNormal([version_num, x_coord, y_coord]) {
+    let version = _versions[version_num];
+    let first_el = _dynamic_nodes[version.operational_list].target_node;
+    let last_el = version.tail;
+    let operational_list = _dynamic_nodes[version.operational_list].next_list;
+    let dynamic_list = version.dynamic_list;
+    let size = version.size - 1;
+    let operational_list_size = version.operational_list_size - 1;
+    let dynamic_list_size = version.dynamic_list_size;
+    _versions.push(new Version(first_el, last_el, operational_list, dynamic_list, size, operational_list_size, dynamic_list_size, _versions.length, _versions.length, version_num, x_coord, y_coord));
+    GetNextStepText("define_new_head_1", _dynamic_nodes[version.operational_list].label);
+    return [DefineNewHead, [operational_list, first_el]];
+}
+async function DefineNewHead([operational_list, first_el]) {
+    GetNextStepText("define_new_head_2", _dynamic_nodes[operational_list].label, first_el);
+    return [ShowNewVersion, []];
+}
+async function ShowNewVersion() {
+    GetNextStepText("pop_node");
+    await UpdateVersionsLayout__NoPhysics();
+    ver_svg.select('g.nodes').select("[id='" + (_versions.length - 1) + "']").dispatch('click');
+    return [RequestOperationalListRebuild, []];
+}
+async function RequestOperationalListRebuild() {
+    GetNextStepText("rebuild_dynamic_list");
+    return [DefineDynamicListSize, [_versions.length - 1]];
+}
+async function EndPopping([version_num]) {
+    GetNextStepText("ended_popping", version_num);
+    console.log('Pop made successfully');
+    return ["End", []];
+}
+
 
 
 function sleep(ms) {
@@ -745,33 +1005,44 @@ function HandleZoom(e) {
 }
 async function Debug() {
     simulation_time = 1;
-    await Push(0);
-    await Push(1);
-    await Push(2);
-    await Push(3);
-    await Push(4);
-    await Push(5);
-    await Push(5);
-    await Push(5);
-    await Push(5);
-    await Push(6);
-    await Push(1);
-    await Push(7);
-    await Push(12);
-    await Push(11);
+    await Push__NoStepping(0);
+    await Push__NoStepping(1);
+    await Push__NoStepping(2);
+    await Push__NoStepping(3);
+    await Push__NoStepping(4);
+    await Push__NoStepping(5);
+    await Push__NoStepping(5);
+    await Push__NoStepping(5);
+    await Push__NoStepping(5);
+    await Push__NoStepping(6);
+    await Push__NoStepping(1);
+    await Push__NoStepping(7);
+    await Push__NoStepping(12);
+    await Push__NoStepping(11);
     simulation_time = 3000;
-    await Push(14);
+    await Push__NoStepping(14);
 }
 
-async function WaitForNextStep() {
-    while (!next_step_required) {
+async function WaitForNextAction() {
+    while (!next_step_required && !previous_step_required) {
         await sleep(10);
     }
-    next_step_required = false;
+    if (next_step_required) {
+        next_step_required = false;
+        return "next";
+    } else {
+        previous_step_required = false;
+        return "prev";
+    }
 }
 function NextStep() {
     if (step_by_step_is_active) {
         next_step_required = true
+    }
+}
+function PreviousStep() {
+    if (step_by_step_is_active) {
+        previous_step_required = true
     }
 }
 
@@ -782,6 +1053,7 @@ function PrepareStepByStepLayout() {
     document.getElementById('step_by_step_cont').hidden = true;
     document.getElementById('update_layout_button').hidden = true;
     document.getElementById('next_step_button').hidden = false;
+    document.getElementById('previous_step_button').hidden = false;
 }
 function ReturnFromStepByStepLayout() {
     document.getElementById('push_form').hidden = false;
@@ -790,6 +1062,7 @@ function ReturnFromStepByStepLayout() {
     document.getElementById('step_by_step_cont').hidden = false;
     document.getElementById('update_layout_button').hidden = false;
     document.getElementById('next_step_button').hidden = true;
+    document.getElementById('previous_step_button').hidden = true;
 }
 
 function SetupVersionSVG() {
@@ -884,9 +1157,11 @@ function UpdateVersionsLayout() {
             return link.id
         })
 
-    ver_svg.select('g.nodes')
+    let g_nodes = ver_svg.select('g.nodes')
         .selectAll('circle')
-        .data(_versions)
+        .data(_versions, d => d.id);
+    g_nodes.exit().remove();
+    g_nodes
         .enter().append('circle')
         .attr('r', 10)
         .attr('class', 'version_node')
@@ -895,9 +1170,11 @@ function UpdateVersionsLayout() {
         })
         .on('click', VersionClick)
 
-    ver_svg.select('g.texts')
+    let g_texts = ver_svg.select('g.texts')
         .selectAll('text')
-        .data(_versions)
+        .data(_versions, d => d.id);
+    g_texts.exit().remove();
+    g_texts
         .enter().append('text')
         .text(function (node) {
             return node.label
@@ -1042,18 +1319,22 @@ function MakeMovableMain() {
     })
 }
 function UpdateMainLayout() {
-    svg.select('g.links')
+    let g_links = svg.select('g.links')
         .selectAll('line')
-        .data(_links)
+        .data(_links, d => d.id);
+    g_links.exit().remove();
+    g_links
         .enter().append('line')
         .attr('class', 'arrow_link')
         .attr('id', function (link) {
             return link.id
         })
 
-    svg.select('g.nodes')
+    let g_nodes = svg.select('g.nodes')
         .selectAll('circle')
-        .data(_main_nodes)
+        .data(_main_nodes, d => d.id);
+    g_nodes.exit().remove();
+    g_nodes
         .enter().append('circle')
         .attr('r', 10)
         .attr('class', 'regular_node')
@@ -1061,9 +1342,11 @@ function UpdateMainLayout() {
             return node.id
         })
 
-    svg.select('g.texts')
+    let g_texts = svg.select('g.texts')
         .selectAll('text')
-        .data(_main_nodes)
+        .data(_main_nodes, d => d.id);
+    g_texts.exit().remove();
+    g_texts
         .enter().append('text')
         .text(function (node) {
             return node.label
@@ -1215,18 +1498,22 @@ function MakeMovableSecondary() {
     })
 }
 function UpdateSecondaryLayout() {
-    sec_svg.select('g.links')
+    let g_links = sec_svg.select('g.links')
         .selectAll('line')
-        .data(_dynamic_links)
+        .data(_dynamic_links, d => d.id);
+    g_links.exit().remove();
+    g_links
         .enter().append('line')
         .attr('class', 'arrow_link')
         .attr('id', function (link) {
             return link.id
         })
 
-    sec_svg.select('g.nodes')
+    let g_nodes = sec_svg.select('g.nodes')
         .selectAll('circle')
-        .data(_dynamic_nodes)
+        .data(_dynamic_nodes, d => d.id);
+    g_nodes.exit().remove();
+    g_nodes
         .enter().append('circle')
         .attr('r', 10)
         .attr('class', 'regular_node')
@@ -1234,9 +1521,11 @@ function UpdateSecondaryLayout() {
             return node.id
         })
 
-    sec_svg.select('g.texts')
+    let g_texts = sec_svg.select('g.texts')
         .selectAll('text')
-        .data(_dynamic_nodes)
+        .data(_dynamic_nodes, d => d.id);
+    g_texts.exit().remove();
+    g_texts
         .enter().append('text')
         .text(function (node) {
             return node.label
@@ -1319,7 +1608,13 @@ function StopUpdatingLayout() {
         is_updating_layout = false;
     }
 }
-
+async function UpdateLayout__NoPhysics() {
+    console.log(`Started updating version layout`);
+    await UpdateVersionsLayout__NoPhysics();
+    await UpdateMainLayout__NoPhysics();
+    await UpdateSecondaryLayout__NoPhysics();
+    console.log(`Ended reshaping layout`);
+}
 
 
 
