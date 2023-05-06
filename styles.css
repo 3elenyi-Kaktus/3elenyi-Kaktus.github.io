@@ -74,6 +74,7 @@
     opacity: 10%;
 }
 [id=help_text] {
+    white-space: pre-wrap;
     border-width: 3px;
     border-style: solid;
     border-color: #287EC7;
