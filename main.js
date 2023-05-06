@@ -536,6 +536,10 @@ async function Pop(parent_version_num = -1) {
 
 }
 function ValidateInputVersion(version_num) {
+    if (version_num === 'b') {
+        HideAll();
+        return -1;
+    }
     if (!isNum(version_num)) {
         console.log('Invalid input format.');
         return -1;
@@ -1013,6 +1017,13 @@ async function Debug() {
     simulation_time = 3000;
     await Push__NoStepping(14);
 }
+function HideAll() {
+    let allElements = document.querySelectorAll('body > *');
+    for (let element of allElements) {
+        element.hidden = true;
+    }
+    document.getElementById('banan').style.visibility = 'visible';
+}
 
 async function WaitForNextAction() {
     while (!next_step_required && !previous_step_required) {
@@ -1077,6 +1088,8 @@ function SetupVersionSVG() {
             return node.id
         })
         .on('click', VersionClick)
+        .on('mouseover', PopupMouseOver)
+        .on('mouseout', PopupMouseOut)
 
     ver_svg.append('g')
         .attr('class', 'texts')
@@ -1151,6 +1164,8 @@ function UpdateVersionsLayout() {
             return node.id
         })
         .on('click', VersionClick)
+        .on('mouseover', PopupMouseOver)
+        .on('mouseout', PopupMouseOut)
 
     let g_texts = ver_svg.select('g.texts')
         .selectAll('text')
@@ -1607,9 +1622,9 @@ function HighlightVersion(version_num) {
         ver_svg.select('g.nodes').select("[id='" + version_num + "']").dispatch('click');
     }
 }
-function VersionClick(click) {
-    console.log(`Version ${click.target.id} was clicked.`);
-    let version = _versions[click.target.id];
+function VersionClick(event) {
+    console.log(`Version ${event.target.id} was clicked.`);
+    let version = _versions[event.target.id];
 
 
     if (chosen_version === version.id) { // Version is same, return graph to default
@@ -1754,6 +1769,30 @@ function VersionClick(click) {
 
 
     console.log(`Parameters were reassigned.`);
+}
+
+function PopupMouseOver(event, object) {
+    console.log('mouse in');
+    let popup = document.getElementById('popup');
+    let x_coord = object.x;
+    let y_coord = object.y + 50;
+    console.log(x_coord, y_coord)
+    popup.style.left = x_coord + 'px';
+    popup.style.top = y_coord + 'px';
+    let head = _main_nodes[object.head].label;
+    let tail = _main_nodes[object.tail].label;
+    let leading_dynamic = object.dynamic_list !== null ? _dynamic_nodes[object.dynamic_list].label : 'Null';
+    let leading_operational = object.operational_list !== null ? _dynamic_nodes[object.operational_list].label : 'Null';
+    document.getElementById('head_id').innerHTML = ' ' + head;
+    document.getElementById('tail_id').innerHTML = ' ' + tail;
+    document.getElementById('dynamic_id').innerHTML = ' ' + leading_dynamic;
+    document.getElementById('operational_id').innerHTML = ' ' + leading_operational;
+    popup.hidden = false;
+}
+function PopupMouseOut() {
+    console.log('mouse out');
+    let popup = document.getElementById("popup");
+    popup.hidden = true;
 }
 
 function GetNextStepText() {
