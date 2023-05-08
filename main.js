@@ -2,6 +2,7 @@
 // Поправить сохранение каждого состояния, кажется сейчас это не так эффективно
 // Возможен визуальный (а может и технический, хз) баг при постоянных возвратах/переходах вперед при пошаговой раскладке,
 // добавленные ноды не крепятся к своим линкам. Не уверен, что починил его.
+// Визуально доработать таблички с поинтерами для версий, чтобы они были отцентрированы по вертикали
 //
 
 
@@ -14,7 +15,7 @@ let _versions = [];
 
 let ver_svg;
 let ver_sim;
-let ver_width = 1800;
+let ver_width = 5000;
 let ver_height = 50;
 
 
@@ -164,6 +165,9 @@ let text_container_en = new Map([
 
     ['ended_popping',
         'We ended popping from our chosen version!'],
+
+    ['not_impl',
+        'Hello there'],
 ]);
 let text_container_ru = new Map([
     ['click_on_old_version_push',
@@ -401,25 +405,19 @@ class Version {
 
 class State {
     constructor(args, function_call, old_sizes) {
-        console.warn("store old state");
         if (_main_nodes.length !== old_sizes[0]) {
-            console.log("store new main node");
             this.new_main_node = Object.assign({}, _main_nodes.at(-1));
         }
         if (_links.length !== old_sizes[1]) {
-            console.log("store new main link");
             this.new_link = Object.assign({}, _links.at(-1));
         }
         if (_dynamic_nodes.length !== old_sizes[2]) {
-            console.log("store new dynamic node");
             this.new_dynamic_node = Object.assign({}, _dynamic_nodes.at(-1));
         }
         if (_dynamic_links.length !== old_sizes[3]) {
-            console.log("store new dynamic link");
             this.new_dynamic_link = Object.assign({}, _dynamic_links.at(-1));
         }
         if (_versions.length !== old_sizes[4]) {
-            console.log("store new version");
             this.new_version = Object.assign({}, _versions.at(-1));
         }
 
@@ -449,41 +447,31 @@ class State {
             _main_nodes.pop();
         }
         if (_links.length !== old_sizes[1] && this.new_link === null) {
-            console.log("pop main link");
             _links.pop();
         }
         if (_dynamic_nodes.length !== old_sizes[2] && this.new_dynamic_node === null) {
-            console.log("pop dynamic node");
             _dynamic_nodes.pop();
         }
         if (_dynamic_links.length !== old_sizes[3] && this.new_dynamic_link === null) {
-            console.log("pop dynamic link");
             _dynamic_links.pop();
         }
         if (_versions.length !== old_sizes[4] && this.new_version === null) {
-            console.log("pop version");
             _versions.pop();
         }
         if (this.new_main_node !== null) {
             _main_nodes[_main_nodes.length - 1] = Object.assign({}, this.new_main_node);
-            console.log("changing last main node");
         }
         if (this.new_link !== null) {
-            console.warn(this.new_link);
             _links[_links.length - 1] = CopyLink(this.new_link);
-            console.log("changing last main link");
         }
         if (this.new_dynamic_node !== null) {
             _dynamic_nodes[_dynamic_nodes.length - 1] = Object.assign({}, this.new_dynamic_node);
-            console.log("changing last dynamic node");
         }
         if (this.new_dynamic_link !== null) {
             _dynamic_links[_dynamic_links.length - 1] = Object.assign({}, this.new_dynamic_link);
-            console.log("changing last dynamic link");
         }
         if (this.new_version !== null) {
             _versions[_versions.length - 1] = Object.assign({}, this.new_version);
-            console.log("changing last version");
         }
 
         chosen_version = this.chosen_version;
@@ -523,7 +511,7 @@ async function Pop(parent_version_num = -1) {
     }
     let parent_version = _versions[parent_version_num];
     if (parent_version.head === 0) {
-        console.log(`Can't pop from empty version`);
+        console.warn(`Can't pop from empty version`);
         return;
     }
     if (step_by_step_is_active) {
@@ -541,12 +529,12 @@ function ValidateInputVersion(version_num) {
         return -1;
     }
     if (!isNum(version_num)) {
-        console.log('Invalid input format.');
+        console.warn('Invalid input format.');
         return -1;
     }
     version_num = Number(version_num);
     if (version_num >= _versions.length) {
-        console.log('Invalid version number.');
+        console.warn('Invalid version number.');
         return -1;
     }
     return version_num;
@@ -556,7 +544,6 @@ async function Push__NoStepping(parent_version_num) {
     StopUpdatingLayout();
 
     let parent_version = _versions[parent_version_num];
-    console.log(`Parent version: ${parent_version_num}`)
 
     let x_coord = _main_nodes[parent_version.tail].x - 30 - GetRandomInt(5);
     let y_coord = _main_nodes[parent_version.tail].y - 30 - GetRandomInt(5);
@@ -585,11 +572,7 @@ async function Push__NoStepping(parent_version_num) {
 async function Pop__NoStepping(parent_version_num) {
     StopUpdatingLayout();
 
-    console.log(`Parent version: ${parent_version_num}.`)
     let version = _versions[parent_version_num];
-
-    let pop_value = _main_nodes[version.head].id;
-    console.log(pop_value);
     let x_coord = _versions.at(-1).x + 30;
     let y_coord = _versions.at(-1).y;
     ++overall_id;
@@ -597,7 +580,6 @@ async function Pop__NoStepping(parent_version_num) {
     if (version.size === 1) {
         _versions.push(new Version(0, 0, null, null, 0, 0, 0, _versions.length, _versions.length, parent_version_num, x_coord, y_coord));
 
-        console.log('Pop made successfully');
         UpdateVersionsLayout();
         return;
     }
@@ -605,7 +587,6 @@ async function Pop__NoStepping(parent_version_num) {
     if (version.size === 2) {
         _versions.push(new Version(version.tail, version.tail, null, null, 1, 0, 0, _versions.length, _versions.length, parent_version_num, x_coord, y_coord));
 
-        console.log('Pop made successfully');
         UpdateVersionsLayout();
         return;
     }
@@ -649,7 +630,6 @@ async function ChangeDynamicList__NoStepping(version) {
     } else {
         targeted_main_node = _main_nodes[version.tail].son_id;
     }
-    console.log(`New dynamic node created. Target node id: ${targeted_main_node}`);
 
     let next_list;
     if (version.dynamic_list !== null) {
@@ -668,7 +648,6 @@ async function ChangeDynamicList__NoStepping(version) {
     } else {
         son_id = 0;
     }
-    console.log('Dynamic node son_id: ' + son_id);
     _dynamic_links.push(new Link(_dynamic_links.length, _dynamic_nodes.length - 1, son_id));
 
     version.dynamic_list = _dynamic_nodes.length - 1;
@@ -696,19 +675,18 @@ async function OperationsCoordinator(parent_version_num) {
     let action = "";
     while (next_function_call !== "End") {
         states[index + 2] = new State(args, next_function_call, old_size);
-        console.warn("Save st before fcall", next_function_call, "at ind", index + 2);
+        console.log("Save state before f_call", next_function_call, "at ind", index + 2);
         ++index;
         console.log("Calling ", next_function_call, args);
         [next_function_call, args] = await next_function_call(args);
         HighlightVersion(chosen_version);
         console.log("Next call ", next_function_call, args);
-        console.log(states);
         action = await WaitForNextAction();
         while (action === "prev") {
             if (index < 0) {
                 action = await WaitForNextAction();
             } else {
-                console.info("getting previous state ", states[index]);
+                console.warn("getting previous state ", states[index]);
                 [args, next_function_call] = states[index].RestoreState(old_size);
                 console.log("got state before calling ", next_function_call, " at ind ", index);
                 index -= 2;
@@ -723,8 +701,6 @@ async function OperationsCoordinator(parent_version_num) {
 }
 
 async function PreparePush([parent_version_num]) {
-    console.log(`Parent version: ${parent_version_num}`)
-
     GetNextStepText("click_on_old_version_push", parent_version_num);
     HighlightVersion(parent_version_num);
     return [CopyOldVersion, [parent_version_num]];
@@ -752,6 +728,9 @@ async function CopyOldVersion([parent_version_num]) {
     }
     return [DefineNodeToPop, [parent_version_num]];
 }
+// async function DefineMainSonNode() { //needs text
+//
+// }
 async function AddMainNode([parent_version_num]) {
     let parent_version = _versions[parent_version_num];
     let x_coord = _main_nodes[parent_version.tail].x - 30 - GetRandomInt(5);
@@ -862,8 +841,6 @@ async function TargetedNodeDefining([version_num]) {
 async function NewDynamicNodeCreation([version_num, targeted_main_node]) {
     let version = _versions[version_num];
 
-    console.log(`New dynamic node created. Target node id: ${targeted_main_node}`);
-
     let next_list;
     if (version.dynamic_list !== null) {
         next_list = version.dynamic_list;
@@ -880,7 +857,6 @@ async function NewDynamicNodeCreation([version_num, targeted_main_node]) {
     } else {
         son_id = 0;
     }
-    console.log('Dynamic node son_id: ' + son_id);
     _dynamic_links.push(new Link(_dynamic_links.length, _dynamic_nodes.length - 1, son_id));
 
     version.dynamic_list = _dynamic_nodes.length - 1;
@@ -908,8 +884,6 @@ async function EndPushing() {
 }
 
 async function PreparePop([parent_version_num]) {
-    console.log(`Parent version: ${parent_version_num}.`)
-
     GetNextStepText("click_on_old_version_pop", parent_version_num);
     HighlightVersion(parent_version_num);
     return [CopyOldVersion, [parent_version_num]];
@@ -1079,6 +1053,7 @@ function SetupVersionSVG() {
 
     ver_svg.append('g')
         .attr('class', 'nodes')
+        .attr('id', 'nodes')
         .selectAll('circle')
         .data(_versions)
         .enter().append('circle')
@@ -1088,8 +1063,8 @@ function SetupVersionSVG() {
             return node.id
         })
         .on('click', VersionClick)
-        .on('mouseover', PopupMouseOver)
-        .on('mouseout', PopupMouseOut)
+        .on('mouseover', PopupMouseOverVersionNode)
+        .on('mouseout', PopupMouseOutVersionNode)
 
     ver_svg.append('g')
         .attr('class', 'texts')
@@ -1164,8 +1139,8 @@ function UpdateVersionsLayout() {
             return node.id
         })
         .on('click', VersionClick)
-        .on('mouseover', PopupMouseOver)
-        .on('mouseout', PopupMouseOut)
+        .on('mouseover', PopupMouseOverVersionNode)
+        .on('mouseout', PopupMouseOutVersionNode)
 
     let g_texts = ver_svg.select('g.texts')
         .selectAll('text')
@@ -1220,6 +1195,7 @@ function SetupMainSVG() {
         .attr('class', 'links')
 
     main_svg.append('g')
+        .attr('id', 'nodes')
         .attr('class', 'nodes')
         .selectAll('circle')
         .data(_main_nodes)
@@ -1229,6 +1205,8 @@ function SetupMainSVG() {
         .attr('id', function (node) {
             return node.id
         })
+        .on('mouseover', PopupMouseOverMainNode)
+        .on('mouseout', PopupMouseOutMainNode)
 
     main_svg.append('g')
         .attr('class', 'texts')
@@ -1338,6 +1316,8 @@ function UpdateMainLayout() {
         .attr('id', function (node) {
             return node.id
         })
+        .on('mouseover', PopupMouseOverMainNode)
+        .on('mouseout', PopupMouseOutMainNode)
 
     let g_texts = main_svg.select('g.texts')
         .selectAll('text')
@@ -1399,6 +1379,7 @@ function SetupSecondarySVG() {
         .attr('class', 'links')
 
     sec_svg.append('g')
+        .attr('id', 'nodes')
         .attr('class', 'nodes')
         .selectAll('circle')
         .data(_dynamic_nodes)
@@ -1408,6 +1389,8 @@ function SetupSecondarySVG() {
         .attr('id', function (node) {
             return node.id
         })
+        .on('mouseover', PopupMouseOverDynamicNode)
+        .on('mouseout', PopupMouseOutDynamicNode)
 
     sec_svg.append('g')
         .attr('class', 'texts')
@@ -1517,6 +1500,8 @@ function UpdateSecondaryLayout() {
         .attr('id', function (node) {
             return node.id
         })
+        .on('mouseover', PopupMouseOverDynamicNode)
+        .on('mouseout', PopupMouseOutDynamicNode)
 
     let g_texts = sec_svg.select('g.texts')
         .selectAll('text')
@@ -1589,7 +1574,7 @@ function BindStepByStepToggler() {
 
 async function UpdateLayout() {
     is_updating_layout = true;
-    console.log(`Started updating version layout`);
+    console.log(`Started updating layout`);
     UpdateVersionsLayout();
     UpdateMainLayout();
     UpdateSecondaryLayout();
@@ -1606,11 +1591,9 @@ function StopUpdatingLayout() {
     }
 }
 async function UpdateLayout__NoPhysics() {
-    console.log(`Started updating version layout`);
     await UpdateVersionsLayout__NoPhysics();
     await UpdateMainLayout__NoPhysics();
     await UpdateSecondaryLayout__NoPhysics();
-    console.log(`Ended reshaping layout`);
 }
 
 
@@ -1622,9 +1605,9 @@ function HighlightVersion(version_num) {
         ver_svg.select('g.nodes').select("[id='" + version_num + "']").dispatch('click');
     }
 }
-function VersionClick(event) {
-    console.log(`Version ${event.target.id} was clicked.`);
-    let version = _versions[event.target.id];
+function VersionClick(event, object) {
+    console.log(`Version ${object.id} was clicked.`);
+    let version = _versions[object.id];
 
 
     if (chosen_version === version.id) { // Version is same, return graph to default
@@ -1649,7 +1632,6 @@ function VersionClick(event) {
             .attr('class', 'graph_text');
 
         chosen_version = -1;
-        console.log(`Parameters were reassigned.`);
         return;
     }
 
@@ -1766,17 +1748,14 @@ function VersionClick(event) {
     main_svg.select('g.nodes')
         .select("[id='" + version.tail + "']")
         .attr('class', 'tail_node');
-
-
-    console.log(`Parameters were reassigned.`);
 }
 
-function PopupMouseOver(event, object) {
-    console.log('mouse in');
-    let popup = document.getElementById('popup');
-    let x_coord = object.x;
-    let y_coord = object.y + 50;
-    console.log(x_coord, y_coord)
+function PopupMouseOverVersionNode(event, object) {
+    console.log('Mouse in version node');
+    let popup = document.getElementById('version_node_popup');
+    let a = document.querySelector(`#versions_svg #nodes [id="${object.id}"]`).getBoundingClientRect();
+    let x_coord = a.left;
+    let y_coord = a.bottom + 18;
     popup.style.left = x_coord + 'px';
     popup.style.top = y_coord + 'px';
     let head = _main_nodes[object.head].label;
@@ -1787,12 +1766,81 @@ function PopupMouseOver(event, object) {
     document.getElementById('tail_id').innerHTML = ' ' + tail;
     document.getElementById('dynamic_id').innerHTML = ' ' + leading_dynamic;
     document.getElementById('operational_id').innerHTML = ' ' + leading_operational;
-    popup.hidden = false;
+    popup.classList.remove('hide_popup');
+    popup.classList.add('show_popup');
 }
-function PopupMouseOut() {
-    console.log('mouse out');
-    let popup = document.getElementById("popup");
-    popup.hidden = true;
+function PopupMouseOutVersionNode() {
+    console.log('Mouse out version node');
+    let popup = document.getElementById("version_node_popup");
+    popup.classList.remove('show_popup');
+    popup.classList.add('hide_popup');
+}
+function PopupMouseOverMainNode(event, object) {
+    console.log('Mouse in main node');
+    let popup = document.getElementById('main_node_popup');
+    let a = document.querySelector(`#main_svg #nodes [id="${object.id}"]`).getBoundingClientRect();
+    let x_coord = a.left;
+    let y_coord = a.bottom + 10;
+    popup.style.left = x_coord + 'px';
+    popup.style.top = y_coord + 'px';
+    let son_id = object.son_id !== null ? _main_nodes[object.son_id].label : 'Null';
+    document.getElementById('main_node_son_id').innerHTML = ' ' + son_id;
+    popup.classList.remove('hide_popup');
+    popup.classList.add('show_popup');
+}
+function PopupMouseOutMainNode() {
+    console.log('Mouse out main node');
+    let popup = document.getElementById('main_node_popup');
+    popup.classList.add('hide_popup');
+    popup.classList.remove('show_popup');
+}
+function PopupMouseOverDynamicNode(event, object) {
+    console.log('Mouse in dynamic node');
+    let popup = document.getElementById('dynamic_node_popup');
+    let a = document.querySelector(`#secondary_svg #nodes [id="${object.id}"]`).getBoundingClientRect();
+    let x_coord = a.left;
+    let y_coord = a.bottom + 10;
+    popup.style.left = x_coord + 'px';
+    popup.style.top = y_coord + 'px';
+    let son = object.next_list !== null ? _dynamic_nodes[object.next_list].label : 'Null';
+    let target_node = object.target_node !== null ? _main_nodes[object.target_node].label : 'Null';
+    document.getElementById('dynamic_node_son_id').innerHTML = ' ' + son;
+    document.getElementById('dynamic_node_target_id').innerHTML = ' ' + target_node;
+    popup.classList.remove('hide_popup');
+    popup.classList.add('show_popup');
+}
+function PopupMouseOutDynamicNode() {
+    console.log('Mouse out dynamic node');
+    let popup = document.getElementById('dynamic_node_popup');
+    popup.classList.add('hide_popup');
+    popup.classList.remove('show_popup');
+}
+
+function NodesHighlightingOn(main_nodes_id, dynamic_nodes_id) {
+    console.log('Highlighting on:', main_nodes_id, dynamic_nodes_id);
+    let main = main_svg.select('g.nodes');
+    for (let node of main_nodes_id) {
+        let target = main.select("[id='" + node + "']").node();
+        target.classList.add('blink_node');
+    }
+    let dynamic = sec_svg.select('g.nodes');
+    for (let node of dynamic_nodes_id) {
+        let target = dynamic.select("[id='" + node + "']").node();
+        target.classList.add('blink_node');
+    }
+}
+function NodesHighlightingOff(main_nodes_id, dynamic_nodes_id) {
+    console.log('Highlighting off:', main_nodes_id, dynamic_nodes_id);
+    let main = main_svg.select('g.nodes');
+    for (let node of main_nodes_id) {
+        let target = main.select("[id='" + node + "']").node();
+        target.classList.remove('blink_node');
+    }
+    let dynamic = sec_svg.select('g.nodes');
+    for (let node of dynamic_nodes_id) {
+        let target = dynamic.select("[id='" + node + "']").node();
+        target.classList.remove('blink_node');
+    }
 }
 
 function GetNextStepText() {

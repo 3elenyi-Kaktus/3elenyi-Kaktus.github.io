@@ -14,7 +14,7 @@
         <option value="ru"> Русский </option>
     </select>
 
-    <div>
+    <div class="versions_container">
         <svg id="versions_svg"></svg>
     </div>
     <div>
@@ -22,7 +22,7 @@
         <svg id="secondary_svg"></svg>
     </div>
     <div>
-        <p id="help_text"> Here is some text. </p>
+        <p id="help_text" class="help_text"> Here is some text. </p>
     </div>
 
 
@@ -56,12 +56,21 @@
 </script>
 
 
-    <div id="popup" class="popup" hidden="hidden">
-        Pointers of version:<br>
-        <div><span>Head: </span><span class="popup_circle" style="background-color: green"></span><span id="head_id"></span></div><br>
+    <div id="version_node_popup" class="popup">
+        Version pointers:<br>
+        Head: <span class="popup_circle" style="background-color: green"></span><span id="head_id"></span><br>
         Tail: <span class="popup_circle" style="background-color: red"></span><span id="tail_id"></span><br>
         Dynamic: <span class="popup_circle" style="background-color: yellow"></span><span id="dynamic_id"></span><br>
         Operational: <span class="popup_circle" style="background-color: aqua"></span><span id="operational_id"></span>
+    </div>
+    <div id="main_node_popup" class="popup">
+        Node pointers:<br>
+        <span>Son: </span><span class="popup_circle" style="background-color: gray"></span><span id="main_node_son_id"></span><br>
+    </div>
+    <div id="dynamic_node_popup" class="popup">
+        Node pointers:<br>
+        <span>Son: </span><span class="popup_circle" style="background-color: gray"></span><span id="dynamic_node_son_id"></span><br>
+        <span>Target node: </span><span class="popup_circle" style="background-color: gray"></span><span id="dynamic_node_target_id"></span><br>
     </div>
 
     <img id="banan" style="width: 750px; visibility: hidden; display: block; margin-left: auto; margin-right: auto; height: auto; align-content: center" src='./banan_enhanced.gif' alt="">

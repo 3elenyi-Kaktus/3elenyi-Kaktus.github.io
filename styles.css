@@ -1,3 +1,10 @@
+.versions_container {
+    width: 1600px;
+    height: 58px;
+    overflow: scroll;
+}
+
+
 [class=arrow_link] {
     stroke-width: 3px;
     stroke: rgba(50, 50, 50, 0.2);
@@ -11,29 +18,28 @@
 }
 
 
-[class=regular_node] {
+.regular_node {
     fill: grey;
     stroke: black;
     stroke-width: 1px;
 }
-[class=faint_node] {
+.faint_node {
     fill: white;
     stroke: black;
     stroke-width: 1px;
     opacity: 10%;
 }
-[class=version_node] {
+.version_node {
     fill: red;
     stroke: white;
     stroke-width: 1px;
 }
-[class=mid_node] {
+.mid_node {
     fill: black;
     stroke: black;
     stroke-width: 1px;
-    opacity: 85%;
 }
-[class=head_node] {
+.head_node {
     fill: green;
     stroke: black;
     stroke-width: 1px;
@@ -43,47 +49,47 @@
     stroke: black;
     stroke-width: 1px;
 }
-[class=null_node] {
+.null_node {
     fill: darkorange;
     stroke: black;
     stroke-width: 1px;
 }
-[class=operational_node] {
+.operational_node {
     fill: aqua;
     stroke: black;
     stroke-width: 1px;
 }
-[class=dynamic_node] {
+.dynamic_node {
     fill: yellow;
     stroke: black;
     stroke-width: 1px;
 }
 
 
-[class=version_text] {
+.version_text {
     fill: white;
     font-size: 15px;
 }
-[class=graph_text] {
+.graph_text {
     fill: black;
     font-size: 15px;
 }
-[class=faint_text] {
+.faint_text {
     fill: black;
     font-size: 15px;
     opacity: 10%;
 }
-[id=help_text] {
+.help_text {
     white-space: pre-wrap;
     border-width: 3px;
     border-style: solid;
-    border-color: #287EC7;
+    border-color: darkblue;
 }
 
 
-[class=popup] {
+.popup {
+    visibility: hidden;
     user-select: none;
-    animation: fadeIn 0.5s;
     width: 165px;
     background-color: #555;
     color: white;
@@ -91,9 +97,17 @@
     padding: 5px;
     border-radius: 6px;
     position: absolute;
+    align-items: center;
+}
+.show_popup {
+    visibility: visible;
+    animation: FadeIn 0.5s;
+}
+.hide_popup {
+    animation: FadeOut 0.5s;
 }
 
-[class=popup_circle] {
+.popup_circle {
     border: 1px solid white;
     height: 17px;
     width: 17px;
@@ -102,12 +116,34 @@
     margin: auto;
 }
 
-@keyframes fadeIn {
+@keyframes FadeIn {
     from {
         opacity: 0;
     }
     to {
-        opacity: 1;
+        opacity: 100;
+    }
+}
+@keyframes FadeOut {
+    from {
+        visibility: visible;
+        opacity: 100;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+.blink_node {
+    animation: blinking 1s infinite alternate ease-in-out;
+}
+
+@keyframes blinking {
+    from {
+        opacity: 100;
+    }
+    to {
+        opacity: 0;
     }
 }
 
