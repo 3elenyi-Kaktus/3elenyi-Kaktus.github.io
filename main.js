@@ -1631,15 +1631,15 @@ async function Setup() {
     BindLocaleSwitcher();
     BindStepByStepToggler();
 
+    SetupVersionSVG();
+    SetupMainSVG();
+    SetupSecondarySVG();
+
     _versions.push(new Version(0, 0, null, null, 0, 0, 0, 0, 'N', null, 25, 25));
     _nodes.push(new Node(null, 0, 'Null', 40, 40));
     _dynamic_nodes.push(new ListNode(null, null, 0, 'Null', 40, 40));
 
-    SetupVersionSVG();
-    SetupMainSVG();
-    SetupSecondarySVG();
-    await sleep(50);
-    is_updating_layout = true;
+    await UpdateLayout();
     StopUpdatingLayout();
 }
 function BindLocaleSwitcher() {
