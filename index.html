@@ -8,44 +8,58 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <label id="locale_switcher_label" for="locale_switcher"> Select locale: </label>
-    <select id="locale_switcher" name="locale_switcher">
-        <option value="en" selected> English </option>
-        <option value="ru"> Русский </option>
-    </select>
+    <div id="side_bar" class="side_bar">
+        <span class="close_button" onclick="CloseSideBar()">&times;</span>
 
-    <div class="versions_container">
-        <svg id="versions_svg"></svg>
+        <label id="locale_switcher_label" class="side_bar_label" for="locale_switcher"> Select locale: </label>
+        <select id="locale_switcher" name="locale_switcher">
+            <option value="en" selected> English </option>
+            <option value="ru"> Русский </option>
+        </select>
+
+        <button id="debug_button" onclick="Debug()"> Debug </button>
+
+        <button id="update_layout_button" onclick="UpdateLayout()"> Update Layout </button>
     </div>
+
+    <div class="container_flex">
+        <div class="side_bar_open_button" onclick="OpenSideBar()">
+            <div class="bar1"></div>
+            <div class="bar2"></div>
+            <div class="bar3"></div>
+        </div>
+        <div class="versions_container">
+            <svg id="versions_svg" class="versions_svg"></svg>
+        </div>
+    </div>
+
+
+
+
+
     <div class="main_dynamic_container">
-        <svg id="main_svg"></svg>
-        <svg id="secondary_svg"></svg>
+            <svg id="main_svg" class="main_svg"></svg><!--
+         --><svg id="secondary_svg" class="secondary_svg"></svg>
     </div>
-    <div>
-        <p id="help_text" class="help_text"> Here is some text. </p>
-    </div>
+    <p id="help_text" class="help_text" hidden="hidden"></p>
 
 
-    <form id="push_form" onsubmit="return false">
+    <form id="push_form" class="push_form" onsubmit="return false">
         <label id="push_version_label" for="push_version"> Push new element to specific version: </label>
-        <input type="text" id="push_version" name="push_version" size="3">
-        <button id="push_button" onclick="Push()"> Push </button>
+        <input type="text" id="push_version" class="push_version" name="push_version" size="3">
+        <button id="push_button" class="push_button" onclick="Push()"> Push </button>
     </form>
 
-    <form id="pop_form" onsubmit="return false">
-        <label id="pop_version_label" for="pop_version"> Pop last value from specific version: </label>
-        <input type="text" id="pop_version" name="pop_version" size="7">
-        <button id="pop_button" onclick="Pop()"> Pop </button>
+    <form id="pop_form" class="pop_form" onsubmit="return false">
+        <label id="pop_version_label" for="pop_version"> Pop last element from specific version: </label>
+        <input type="text" id="pop_version" class="pop_version" name="pop_version" size="3">
+        <button id="pop_button" class="pop_button" onclick="Pop()"> Pop </button>
     </form>
 
-    <div id="step_by_step_cont">
-        <input type="checkbox" id="step_by_step_toggle_checkbox" name="step_by_step_toggle_checkbox">
+    <div id="step_by_step_container" class="step_by_step_container">
+        <input type="checkbox" id="step_by_step_toggle_checkbox" class="step_by_step_toggle_checkbox" name="step_by_step_toggle_checkbox">
         <label id="step_by_step_toggle_checkbox_label" for="step_by_step_toggle_checkbox"> Activate Step-by-Step </label>
     </div>
-
-    <button id="debug_button" onclick="Debug()"> Debug </button>
-
-    <button id="update_layout_button" onclick="UpdateLayout()"> Update Layout </button>
 
     <button id="previous_step_button" onclick="PreviousStep()" hidden="hidden"> Previous step </button>
 

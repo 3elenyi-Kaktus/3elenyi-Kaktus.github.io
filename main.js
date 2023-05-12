@@ -3,10 +3,12 @@
 //TODO
 // Визуально доработать таблички с поинтерами для версий, чтобы они были отцентрированы по вертикали
 //
+//todo
+// Поправить и дополнить русский перевод
 
 
-let _main_nodes = []
-let _links = []
+let _nodes = [];
+let _links = [];
 let _dynamic_nodes = [];
 let _dynamic_links = [];
 let _versions = [];
@@ -14,29 +16,23 @@ let _versions = [];
 
 let ver_svg;
 let ver_sim;
-let ver_width = 5000;
-let ver_height = 58;
 
 
 let main_svg;
 let main_sim;
-let main_width = 900; // = window.innerWidth;
-let main_height = 500; // = window.innerHeight;
-let linkForce;
-let overall_id = 1;
+let main_linkForce;
 let main_zoom;
 
 
 let sec_svg;
 let sec_sim;
-let sec_width = 700;
-let sec_height = 500;
 let sec_linkForce;
 let sec_zoom;
 
 
 let simulation_time = 3000; // ms
 const linkStr = 0.1;
+let overall_id = 1;
 
 let is_updating_layout = false;
 
@@ -98,20 +94,20 @@ let text_container_en = new Map([
     ['get_leading_dynamic_node',
         'To swap lists we have to check if dynamic list reached corresponding version head.\n' +
         'We perform following operations:\n' +
-        '1) Get leading dynamic list node - it\'s node {1}.\n'],
+        '1) Get leading dynamic list node - it\'s node {1}.'],
 
     ['get_targeted_main_node',
         'To swap lists we have to check if dynamic list reached corresponding version head.\n' +
         'We perform following operations:\n' +
         '1) Get leading dynamic list node - it\'s node {1}.\n' +
-        '2) Get it\'s targeted node in main tree - it\'s node {2}.\n'],
+        '2) Get it\'s targeted node in main tree - it\'s node {2}.'],
 
     ['get_targeted_node_son',
         'To swap lists we have to check if dynamic list reached corresponding version head.\n' +
         'We perform following operations:\n' +
         '1) Get leading dynamic list node - it\'s node {1}.\n' +
         '2) Get it\'s targeted node in main tree - it\'s node {2}.\n' +
-        '3) Get targeted node son - it\'s node {3}'],
+        '3) Get targeted node son - it\'s node {3}.'],
 
     ['second_swap_failed',
         'Version head is node {1}, which isn\'t same node which we got earlier.\n' +
@@ -144,7 +140,7 @@ let text_container_en = new Map([
     ['define_targeted_node_null',
         'To do so, we need to define targeted node in main tree.\n' +
         'We just need to get son of the tail node:\n' +
-        '1) Current tail is node {1}.\n'],
+        '1) Current tail is node {1}.'],
 
     ['define_targeted_node_null2',
         'To do so, we need to define targeted node in main tree.\n' +
@@ -155,7 +151,7 @@ let text_container_en = new Map([
 
     ['add_new_dynamic_node_1',
         'This way, we created new dynamic node.\n' +
-        'Let\'s link it to the previous leading one.\n'],
+        'Let\'s link it to the previous leading one.'],
 
     ['add_new_dynamic_node_2',
         'This way, we created new dynamic node.\n' +
@@ -202,9 +198,6 @@ let text_container_en = new Map([
 
     ['ended_popping',
         'We ended popping from our chosen version!'],
-
-    ['not_impl',
-        'Hello there'],
 ]);
 let text_container_ru = new Map([
     ['click_on_old_version_push',
@@ -370,8 +363,8 @@ function CopyLink(link) {
 }
 
 class Node {
-    constructor(son = null, id = null, label = null, x = 0, y = 0) {
-        this.son_id = son;
+    constructor(son_id = null, id = null, label = null, x = 0, y = 0) {
+        this.son_id = son_id;
         this.id = id;
         this.label = label;
         this.x = x;
@@ -441,34 +434,17 @@ class Version {
 }
 
 class Highlighters {
-    constructor(new_main_nodes = null, new_main_links = null, new_dynamic_nodes = null, new_dynamic_links = null) {
-        if (new_main_nodes !== null) {
-            this.main_nodes = new_main_nodes;
-        } else {
-            this.main_nodes = [];
-        }
-        if (new_main_links !== null) {
-            this.main_links = new_main_links;
-        } else {
-            this.main_links = [];
-        }
-        if (new_dynamic_nodes !== null) {
-            this.dynamic_nodes = new_dynamic_nodes;
-        } else {
-            this.dynamic_nodes = [];
-        }
-        if (new_dynamic_links !== null) {
-            this.dynamic_links = new_dynamic_links;
-        } else {
-            this.dynamic_links = [];
-        }
+    constructor(main_nodes = null, main_links = null, dynamic_nodes = null, dynamic_links = null) {
+        this.main_nodes = (main_nodes !== null) ? main_nodes : [];
+        this.main_links = (main_links !== null) ? main_links : [];
+        this.dynamic_nodes = (dynamic_nodes !== null) ? dynamic_nodes : [];
+        this.dynamic_links = (dynamic_links !== null) ? dynamic_links : [];
     }
 
     main_nodes;
     dynamic_nodes;
     main_links;
     dynamic_links;
-
 
     AddMainNode(nodes, needs_rehighlighting = false) {
         for (let node of nodes) {
@@ -502,33 +478,9 @@ class Highlighters {
             this.ReHighlight();
         }
     }
-
-    /*Remove(nodes, links) {
-        if (nodes.length) {
-            for (let node of nodes[0]) {
-                let index = this.nodes[0].indexOf(node);
-                this.nodes[0].splice(index, 1)
-            }
-            for (let node of nodes[1]) {
-                let index = this.nodes[1].indexOf(node);
-                this.nodes[1].splice(index, 1)
-            }
-        }
-        if (links.length) {
-            for (let link of links[0]) {
-                let index = this.links[0].indexOf(link);
-                this.links[0].splice(index, 1)
-            }
-            for (let link of links[1]) {
-                let index = this.links[1].indexOf(link);
-                this.links[1].splice(index, 1)
-            }
-        }
-    }*/
     ReHighlight() {
-        console.warn('Rehighlighting');
         let main = main_svg.select('g.nodes');
-        for (let i = 0; i < _main_nodes.length; ++i) {
+        for (let i = 0; i < _nodes.length; ++i) {
             let target = main.select("[id='" + i + "']").node();
             target.classList.remove('blink_node');
         }
@@ -571,7 +523,6 @@ class Highlighters {
         }
     }
     Clear(needs_rehighlighting = true) {
-        console.warn("Cleaning");
         this.main_nodes = [];
         this.dynamic_nodes = [];
         this.main_links = [];
@@ -584,25 +535,13 @@ class Highlighters {
 
 class State {
     constructor(args, function_call, old_sizes, highlighters) {
-        if (_main_nodes.length !== old_sizes[0]) {
-            this.new_main_node = Object.assign({}, _main_nodes.at(-1));
-        }
-        if (_links.length !== old_sizes[1]) {
-            this.new_link = Object.assign({}, _links.at(-1));
-        }
-        if (_dynamic_nodes.length !== old_sizes[2]) {
-            this.new_dynamic_node = Object.assign({}, _dynamic_nodes.at(-1));
-        }
-        if (_dynamic_links.length !== old_sizes[3]) {
-            this.new_dynamic_link = Object.assign({}, _dynamic_links.at(-1));
-        }
-        if (_versions.length !== old_sizes[4]) {
-            this.new_version = Object.assign({}, _versions.at(-1));
-        }
+        this.main_node = (_nodes.length !== old_sizes[0]) ? Object.assign({}, _nodes.at(-1)) : null;
+        this.main_link = (_links.length !== old_sizes[1]) ? Object.assign({}, _links.at(-1)) : null;
+        this.dynamic_node = (_dynamic_nodes.length !== old_sizes[2]) ? Object.assign({}, _dynamic_nodes.at(-1)) : null;
+        this.dynamic_link = (_dynamic_links.length !== old_sizes[3]) ? Object.assign({}, _dynamic_links.at(-1)) : null;
+        this.version = (_versions.length !== old_sizes[4]) ? Object.assign({}, _versions.at(-1)) : null;
 
         this.highlighters = JSON.parse(JSON.stringify(highlighters));
-        console.log(this.highlighters)
-
         this.chosen_version = chosen_version;
         this.is_first_swap = is_first_swap;
         this.overall_id = overall_id;
@@ -611,14 +550,13 @@ class State {
         this.function_call = function_call;
     }
 
-    new_main_node = null;
-    new_link = null;
-    new_version = null;
-    new_dynamic_node = null;
-    new_dynamic_link = null;
+    main_node = null;
+    main_link = null;
+    version = null;
+    dynamic_node = null;
+    dynamic_link = null;
 
     highlighters;
-
     chosen_version;
     is_first_swap;
     overall_id;
@@ -627,37 +565,35 @@ class State {
     function_call;
 
     RestoreState(old_sizes) {
-        if (_main_nodes.length !== old_sizes[0] && this.new_main_node === null) {
-            _main_nodes.pop();
+        if (_nodes.length !== old_sizes[0] && this.main_node === null) {
+            _nodes.pop();
         }
-        if (_links.length !== old_sizes[1] && this.new_link === null) {
+        if (_links.length !== old_sizes[1] && this.main_link === null) {
             _links.pop();
         }
-        if (_dynamic_nodes.length !== old_sizes[2] && this.new_dynamic_node === null) {
+        if (_dynamic_nodes.length !== old_sizes[2] && this.dynamic_node === null) {
             _dynamic_nodes.pop();
         }
-        if (_dynamic_links.length !== old_sizes[3] && this.new_dynamic_link === null) {
+        if (_dynamic_links.length !== old_sizes[3] && this.dynamic_link === null) {
             _dynamic_links.pop();
         }
-        if (_versions.length !== old_sizes[4] && this.new_version === null) {
+        if (_versions.length !== old_sizes[4] && this.version === null) {
             _versions.pop();
         }
-        if (this.new_main_node !== null) {
-            console.warn('old', _main_nodes[_main_nodes.length - 1])
-            _main_nodes[_main_nodes.length - 1] = Object.assign({}, this.new_main_node);
-            console.warn('new', _main_nodes[_main_nodes.length - 1])
+        if (this.main_node !== null) {
+            _nodes[_nodes.length - 1] = Object.assign({}, this.main_node);
         }
-        if (this.new_link !== null) {
-            _links[_links.length - 1] = CopyLink(this.new_link);
+        if (this.main_link !== null) {
+            _links[_links.length - 1] = CopyLink(this.main_link);
         }
-        if (this.new_dynamic_node !== null) {
-            _dynamic_nodes[_dynamic_nodes.length - 1] = Object.assign({}, this.new_dynamic_node);
+        if (this.dynamic_node !== null) {
+            _dynamic_nodes[_dynamic_nodes.length - 1] = Object.assign({}, this.dynamic_node);
         }
-        if (this.new_dynamic_link !== null) {
-            _dynamic_links[_dynamic_links.length - 1] = CopyLink(this.new_dynamic_link);
+        if (this.dynamic_link !== null) {
+            _dynamic_links[_dynamic_links.length - 1] = CopyLink(this.dynamic_link);
         }
-        if (this.new_version !== null) {
-            _versions[_versions.length - 1] = Object.assign({}, this.new_version);
+        if (this.version !== null) {
+            _versions[_versions.length - 1] = Object.assign({}, this.version);
         }
 
 
@@ -671,10 +607,11 @@ class State {
 }
 
 async function Push(parent_version_num = -1) {
-    console.log(`Push called.`);
+    console.log('Push called.');
     if (parent_version_num < 0) {
         let form = document.getElementById('push_form');
         parent_version_num = form.push_version.value;
+        form.reset();
     }
     parent_version_num = ValidateInputVersion(parent_version_num);
     if (parent_version_num < 0) {
@@ -684,15 +621,16 @@ async function Push(parent_version_num = -1) {
         is_push = true;
         await OperationsCoordinator(parent_version_num);
     } else {
-        await Push__NoStepping(parent_version_num)
+        await Push__NoStepping(parent_version_num);
     }
     console.log('Push made successfully');
 }
 async function Pop(parent_version_num = -1) {
-    console.log(`Pop called.`);
+    console.log('Pop called.');
     if (parent_version_num < 0) {
         let form = document.getElementById('pop_form');
         parent_version_num = form.pop_version.value;
+        form.reset();
     }
     parent_version_num = ValidateInputVersion(parent_version_num);
     if (parent_version_num < 0) {
@@ -707,7 +645,7 @@ async function Pop(parent_version_num = -1) {
         is_push = false;
         await OperationsCoordinator(parent_version_num);
     } else {
-        await Pop__NoStepping(parent_version_num)
+        await Pop__NoStepping(parent_version_num);
     }
     console.log('Pop made successfully');
 
@@ -734,13 +672,13 @@ async function Push__NoStepping(parent_version_num) {
 
     let parent_version = _versions[parent_version_num];
 
-    let x_coord = _main_nodes[parent_version.tail].x - 30 - GetRandomInt(5);
-    let y_coord = _main_nodes[parent_version.tail].y - 30 - GetRandomInt(5);
-    _main_nodes.push(new Node(parent_version.tail, _main_nodes.length, overall_id++, x_coord, y_coord));
-    let new_node = _main_nodes.length - 1;
+    let x_coord = _nodes[parent_version.tail].x - 30 - GetRandomInt(5);
+    let y_coord = _nodes[parent_version.tail].y - 30 - GetRandomInt(5);
+    _nodes.push(new Node(parent_version.tail, _nodes.length, overall_id++, x_coord, y_coord));
+    let new_node = _nodes.length - 1;
 
 
-    _links.push(new Link(_links.length, new_node, _main_nodes[new_node].son_id));
+    _links.push(new Link(_links.length, new_node, _nodes[new_node].son_id));
 
 
     x_coord = _versions.at(-1).x + 32;
@@ -794,8 +732,8 @@ async function Pop__NoStepping(parent_version_num) {
     await UpdateLayout();
 }
 async function ListsExchange__NoStepping(version) {
-    if (version.dynamic_list !== null && _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id === version.head) {
-        console.log('Dynamic and operational lists swapped.');
+    let dynamic_list = version.dynamic_list;
+    if (dynamic_list !== null && _nodes[_dynamic_nodes[dynamic_list].target_node].son_id === version.head) {
         version.operational_list = version.dynamic_list;
         version.operational_list_size = version.dynamic_list_size;
         version.dynamic_list = null;
@@ -806,37 +744,18 @@ async function ListsExchange__NoStepping(version) {
 }
 async function ChangeDynamicList__NoStepping(version) {
     let curr_version_nodes_size = Math.max(0, version.size - 2);
-    if (version.operational_list_size * 2 >= curr_version_nodes_size) {
-        return;
-    }
-    if (await ListsExchange__NoStepping(version)) {
+    if (version.operational_list_size * 2 >= curr_version_nodes_size || await ListsExchange__NoStepping(version)) {
         return;
     }
 
-    let targeted_main_node;
-    if (version.dynamic_list !== null) {
-        targeted_main_node = _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id;
-    } else {
-        targeted_main_node = _main_nodes[version.tail].son_id;
-    }
-
-    let next_list;
-    if (version.dynamic_list !== null) {
-        next_list = version.dynamic_list;
-    } else {
-        next_list = 0;
-    }
+    let targeted_main_node = (version.dynamic_list !== null) ? _nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id : _nodes[version.tail].son_id;
+    let next_list = (version.dynamic_list !== null) ? version.dynamic_list : 0;
     let x_coord = _dynamic_nodes[next_list].x - 30 - GetRandomInt(5);
     let y_coord = _dynamic_nodes[next_list].y - 30 - GetRandomInt(5);
     _dynamic_nodes.push(new ListNode(next_list, targeted_main_node, _dynamic_nodes.length, targeted_main_node, x_coord, y_coord));
 
 
-    let son_id;
-    if (version.dynamic_list !== null) {
-        son_id = version.dynamic_list;
-    } else {
-        son_id = 0;
-    }
+    let son_id = (version.dynamic_list !== null) ? version.dynamic_list : 0;
     _dynamic_links.push(new Link(_dynamic_links.length, _dynamic_nodes.length - 1, son_id));
 
     version.dynamic_list = _dynamic_nodes.length - 1;
@@ -851,34 +770,29 @@ async function OperationsCoordinator(parent_version_num) {
 
     is_first_swap = true;
     let next_function_call;
-    if (is_push) {
-        next_function_call = PreparePush;
-    } else {
-        next_function_call = PreparePop;
-    }
+    next_function_call = (is_push) ? PreparePush : PreparePop;
     let states = [];
     highlighters = new Highlighters();
     let args = [parent_version_num];
-    let old_size = [_main_nodes.length, _links.length, _dynamic_nodes.length, _dynamic_links.length, _versions.length]
+    let old_size = [_nodes.length, _links.length, _dynamic_nodes.length, _dynamic_links.length, _versions.length];
 
     let index = -2;
-    let action = "";
-    while (next_function_call !== "End") {
+    let action = '';
+    while (next_function_call !== 'End') {
         states[index + 2] = new State(args, next_function_call, old_size, highlighters);
-        console.log("Save state before f_call", next_function_call, "at ind", index + 2);
+        console.log('Saving state before f_call', next_function_call);
         ++index;
-        console.log("Calling ", next_function_call, args);
         [next_function_call, args] = await next_function_call(args);
         HighlightVersion(chosen_version);
-        console.log("Next call ", next_function_call, args);
+        console.log('Next call', next_function_call, args);
         action = await WaitForNextAction();
         while (action === "prev") {
             if (index < 0) {
                 action = await WaitForNextAction();
             } else {
-                console.warn("getting previous state ", states[index]);
+                console.warn('Getting previous state', states[index]);
                 [args, next_function_call, highlighters] = states[index].RestoreState(old_size);
-                console.log("got state before calling ", next_function_call, " at ind ", index);
+                console.log('Restored state before calling', next_function_call);
                 index -= 2;
                 highlighters.ReHighlight();
                 await UpdateLayout__NoPhysics();
@@ -892,7 +806,7 @@ async function OperationsCoordinator(parent_version_num) {
 }
 
 async function PreparePush([parent_version_num]) {
-    GetNextStepText("click_on_old_version_push", parent_version_num);
+    GetNextStepText('click_on_old_version_push', parent_version_num);
     HighlightVersion(parent_version_num);
     return [CopyOldVersion, [parent_version_num]];
 }
@@ -911,7 +825,7 @@ async function CopyOldVersion([parent_version_num]) {
     let dynamic_list_size = parent_version.dynamic_list_size;
     _versions.push(new Version(first_el, last_el, operational_list, dynamic_list, size, operational_list_size, dynamic_list_size, _versions.length, _versions.length, parent_version_num, x_coord, y_coord));
 
-    GetNextStepText("copy_old_version");
+    GetNextStepText('copy_old_version');
     await UpdateVersionsLayout__NoPhysics();
 
     if (is_push) {
@@ -923,17 +837,17 @@ async function DefineTailNodeToLink([parent_version_num]) { //needs text about l
     let parent_version = _versions[parent_version_num];
     let son = parent_version.tail;
     highlighters.AddMainNode([son], true);
-    GetNextStepText('define_tail_node_to_link', _main_nodes[son].label);
+    GetNextStepText('define_tail_node_to_link', _nodes[son].label);
     return [LinkNewMainNode, [parent_version_num]];
 }
 async function LinkNewMainNode([parent_version_num]) {
     let parent_version = _versions[parent_version_num];
-    let x_coord = _main_nodes[parent_version.tail].x - 30 - GetRandomInt(5);
-    let y_coord = _main_nodes[parent_version.tail].y - 30 - GetRandomInt(5);
-    _main_nodes.push(new Node(parent_version.tail, _main_nodes.length, overall_id++, x_coord, y_coord));
-    let new_node = _main_nodes.length - 1;
+    let x_coord = _nodes[parent_version.tail].x - 30 - GetRandomInt(5);
+    let y_coord = _nodes[parent_version.tail].y - 30 - GetRandomInt(5);
+    _nodes.push(new Node(parent_version.tail, _nodes.length, overall_id++, x_coord, y_coord));
+    let new_node = _nodes.length - 1;
 
-    _links.push(new Link(_links.length, new_node, _main_nodes[new_node].son_id));
+    _links.push(new Link(_links.length, new_node, _nodes[new_node].son_id));
 
     let version = _versions.at(-1);
     version.head = parent_version.head !== 0 ? parent_version.head : new_node;
@@ -945,29 +859,28 @@ async function LinkNewMainNode([parent_version_num]) {
     highlighters.Clear(false);
     highlighters.AddMainNode([new_node]);
     highlighters.AddMainLink([_links.length - 1], true);
-    HighlightVersion(_versions.length - 1)
-    GetNextStepText("push_new_node", _main_nodes[new_node].label);
+    HighlightVersion(_versions.length - 1);
+    GetNextStepText('push_new_node', _nodes[new_node].label);
     return [DynamicListProbableChange, [_versions.length - 1]];
 }
 
 async function DynamicListProbableChange([version_num]) {
     highlighters.Clear();
-    GetNextStepText("dynamic_list_probable_change");
+    GetNextStepText('dynamic_list_probable_change');
     return [CheckDynamicListSize, [version_num]];
 }
 async function CheckDynamicListSize([version_num]){
     let version = _versions[version_num];
     let untracked_nodes_amount = Math.max(0, version.size - 2);
     if (version.operational_list_size * 2 >= untracked_nodes_amount) {
-        GetNextStepText("list_size_nothing_changes", version.operational_list_size, untracked_nodes_amount);
+        GetNextStepText('list_size_nothing_changes', version.operational_list_size, untracked_nodes_amount);
         if (is_push) {
             return [EndPushing, []];
         }
         return [EndPopping, []];
-    } else {
-        GetNextStepText("list_size_needs_changes", version.operational_list_size, untracked_nodes_amount);
-        return [TrySwappingLists, [version_num]];
     }
+    GetNextStepText('list_size_needs_changes', version.operational_list_size, untracked_nodes_amount);
+    return [TrySwappingLists, [version_num]];
 }
 
 async function TrySwappingLists([version_num]) {
@@ -975,14 +888,13 @@ async function TrySwappingLists([version_num]) {
     let version = _versions[version_num];
     if (version.dynamic_list === null) {
         is_first_swap = false;
-        GetNextStepText("dynamic_list_is_null");
+        GetNextStepText('dynamic_list_is_null');
         return [TargetedNodeDefining, [version_num]];
-    } else {
-        let dynamic_list = version.dynamic_list;
-        highlighters.AddDynamicNode([dynamic_list], true);
-        GetNextStepText("get_leading_dynamic_node", _dynamic_nodes[dynamic_list].label);
-        return [CheckIfReachedHead1, [version_num]];
     }
+    let dynamic_list = version.dynamic_list;
+    highlighters.AddDynamicNode([dynamic_list], true);
+    GetNextStepText('get_leading_dynamic_node', _dynamic_nodes[dynamic_list].label);
+    return [CheckIfReachedHead1, [version_num]];
 }
 async function CheckIfReachedHead1([version_num]) {
     let version = _versions[version_num];
@@ -991,7 +903,7 @@ async function CheckIfReachedHead1([version_num]) {
     let targeted_node = _dynamic_nodes[dynamic_list].target_node;
     highlighters.Clear(false);
     highlighters.AddMainNode([targeted_node], true);
-    GetNextStepText("get_targeted_main_node", _dynamic_nodes[dynamic_list].label, _main_nodes[targeted_node].label);
+    GetNextStepText('get_targeted_main_node', _dynamic_nodes[dynamic_list].label, _nodes[targeted_node].label);
     return [CheckIfReachedHead2, [version_num]];
 }
 async function CheckIfReachedHead2([version_num]) {
@@ -999,25 +911,24 @@ async function CheckIfReachedHead2([version_num]) {
 
     let dynamic_list = version.dynamic_list;
     let targeted_node = _dynamic_nodes[dynamic_list].target_node;
-    let targeted_node_son = _main_nodes[targeted_node].son_id
+    let targeted_node_son = _nodes[targeted_node].son_id;
     highlighters.Clear(false);
     highlighters.AddMainNode([targeted_node_son], true);
-    GetNextStepText("get_targeted_node_son", _dynamic_nodes[dynamic_list].label, _main_nodes[targeted_node].label, _main_nodes[targeted_node_son].label);
+    GetNextStepText('get_targeted_node_son', _dynamic_nodes[dynamic_list].label, _nodes[targeted_node].label, _nodes[targeted_node_son].label);
     return [ConfirmListsSwap, [version_num]];
 }
 
 async function ConfirmListsSwap([version_num]) {
     highlighters.Clear();
     let version = _versions[version_num];
-    let head = version.head
-    if (version.dynamic_list !== null && _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id === version.head) {
-        console.log('Dynamic and operational lists swapped.');
+    let head = version.head;
+    if (version.dynamic_list !== null && _nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id === head) {
         version.operational_list = version.dynamic_list;
         version.operational_list_size = version.dynamic_list_size;
         version.dynamic_list = null;
         version.dynamic_list_size = 0;
 
-        GetNextStepText("reached_head_swap_confirmed", _main_nodes[head].label);
+        GetNextStepText('reached_head_swap_confirmed', _nodes[head].label);
         HighlightVersion(version_num);
         if (is_first_swap) {
             is_first_swap = false;
@@ -1030,17 +941,17 @@ async function ConfirmListsSwap([version_num]) {
     }
     if (is_first_swap) {
         is_first_swap = false;
-        GetNextStepText("first_swap_failed", _main_nodes[head].label);
+        GetNextStepText('first_swap_failed', _nodes[head].label);
         return [TargetedNodeDefining, [version_num]];
     }
-    GetNextStepText("second_swap_failed", _main_nodes[head].label);
+    GetNextStepText('second_swap_failed', _nodes[head].label);
     if (is_push) {
         return [EndPushing, []];
     }
     return [EndPopping, []];
 }
 async function FirstSwapSuccess() {
-    GetNextStepText("swap_success");
+    GetNextStepText('swap_success');
     if (is_push) {
         return [EndPushing, []];
     }
@@ -1053,12 +964,12 @@ async function TargetedNodeDefining([version_num]) {
     if (version.dynamic_list !== null) {
         let dynamic_node = version.dynamic_list;
         highlighters.AddDynamicNode([dynamic_node], true);
-        GetNextStepText("define_targeted_node_1", _dynamic_nodes[dynamic_node].label);
+        GetNextStepText('define_targeted_node_1', _dynamic_nodes[dynamic_node].label);
         return [TargetedNodeDefining2, [version_num]];
     } else {
         let tail = version.tail;
         highlighters.AddMainNode([tail], true);
-        GetNextStepText("define_targeted_node_null", _main_nodes[tail].label);
+        GetNextStepText('define_targeted_node_null', _nodes[tail].label);
         return [TargetedNodeDefiningNull2, [version_num]];
     }
 
@@ -1068,9 +979,9 @@ async function TargetedNodeDefining2([version_num]) {
 
     let dynamic_node = version.dynamic_list;
     let targeted_node = _dynamic_nodes[dynamic_node].target_node;
-    highlighters.Clear(false)
+    highlighters.Clear(false);
     highlighters.AddMainNode([targeted_node], true);
-    GetNextStepText("define_targeted_node_2", _dynamic_nodes[dynamic_node].label, _main_nodes[targeted_node].label);
+    GetNextStepText('define_targeted_node_2', _dynamic_nodes[dynamic_node].label, _nodes[targeted_node].label);
 
     return [TargetedNodeDefining3, [version_num]];
 }
@@ -1079,10 +990,10 @@ async function TargetedNodeDefining3([version_num]) {
 
     let dynamic_node = version.dynamic_list;
     let targeted_node = _dynamic_nodes[dynamic_node].target_node;
-    let new_targeted_main_node = _main_nodes[targeted_node].son_id;
-    highlighters.Clear(false)
+    let new_targeted_main_node = _nodes[targeted_node].son_id;
+    highlighters.Clear(false);
     highlighters.AddMainNode([new_targeted_main_node], true);
-    GetNextStepText("define_targeted_node_3", _dynamic_nodes[dynamic_node].label, _main_nodes[targeted_node].label, _main_nodes[new_targeted_main_node].label);
+    GetNextStepText('define_targeted_node_3', _dynamic_nodes[dynamic_node].label, _nodes[targeted_node].label, _nodes[new_targeted_main_node].label);
 
     return [NewDynamicNodeCreation, [version_num, new_targeted_main_node]];
 }
@@ -1090,10 +1001,10 @@ async function TargetedNodeDefiningNull2([version_num]) {
     let version = _versions[version_num];
 
     let tail = version.tail;
-    let new_targeted_main_node = _main_nodes[version.tail].son_id;
-    highlighters.Clear(false)
+    let new_targeted_main_node = _nodes[version.tail].son_id;
+    highlighters.Clear(false);
     highlighters.AddMainNode([new_targeted_main_node], true);
-    GetNextStepText("define_targeted_node_null2", _main_nodes[tail].label, _main_nodes[new_targeted_main_node].label);
+    GetNextStepText('define_targeted_node_null2', _nodes[tail].label, _nodes[new_targeted_main_node].label);
     return [NewDynamicNodeCreation, [version_num, new_targeted_main_node]];
 
 }
@@ -1101,31 +1012,21 @@ async function TargetedNodeDefiningNull2([version_num]) {
 async function NewDynamicNodeCreation([version_num, targeted_main_node]) {
     let version = _versions[version_num];
 
-    let next_list;
-    if (version.dynamic_list !== null) {
-        next_list = version.dynamic_list;
-    } else {
-        next_list = 0;
-    }
+    let next_list = (version.dynamic_list !== null) ? version.dynamic_list : 0;
     let x_coord = _dynamic_nodes[next_list].x - 30 - GetRandomInt(5);
     let y_coord = _dynamic_nodes[next_list].y - 30 - GetRandomInt(5);
     _dynamic_nodes.push(new ListNode(next_list, targeted_main_node, _dynamic_nodes.length, targeted_main_node, x_coord, y_coord));
 
-    let son_id;
-    if (version.dynamic_list !== null) {
-        son_id = version.dynamic_list;
-    } else {
-        son_id = 0;
-    }
+    let son_id = (version.dynamic_list !== null) ? version.dynamic_list : 0;
     _dynamic_links.push(new Link(_dynamic_links.length, _dynamic_nodes.length - 1, son_id));
 
     version.dynamic_list = _dynamic_nodes.length - 1;
     ++version.dynamic_list_size;
 
     if (version.dynamic_list !== null) {
-        GetNextStepText("add_new_dynamic_node_1");
+        GetNextStepText('add_new_dynamic_node_1');
     } else {
-        GetNextStepText("add_new_dynamic_node_2");
+        GetNextStepText('add_new_dynamic_node_2');
     }
 
     await UpdateSecondaryLayout__NoPhysics();
@@ -1138,17 +1039,17 @@ async function NewDynamicNodeCreation([version_num, targeted_main_node]) {
 }
 async function TrySwappingListsAgain([version_num]) {
     highlighters.Clear();
-    GetNextStepText("try_swap_again");
+    GetNextStepText('try_swap_again');
     return [TrySwappingLists, [version_num]];
 }
 
 async function EndPushing() {
-    GetNextStepText("ended_pushing");
-    return ["End", []];
+    GetNextStepText('ended_pushing');
+    return ['End', []];
 }
 
 async function PreparePop([parent_version_num]) {
-    GetNextStepText("click_on_old_version_pop", parent_version_num);
+    GetNextStepText('click_on_old_version_pop', parent_version_num);
     HighlightVersion(parent_version_num);
     return [CopyOldVersion, [parent_version_num]];
 }
@@ -1156,7 +1057,7 @@ async function DefineNodeToPop([parent_version_num]) {
     let parent_version = _versions[parent_version_num];
     let head = parent_version.head;
     highlighters.AddMainNode([head], true);
-    GetNextStepText("define_node_to_pop", _main_nodes[head].label);
+    GetNextStepText('define_node_to_pop', _nodes[head].label);
     ++overall_id;
     if (parent_version.size === 1) {
         return [QueueSizeIs1, []];
@@ -1173,7 +1074,7 @@ async function QueueSizeIs1() {
     version.size = 0;
     highlighters.Clear();
     HighlightVersion(_versions.length - 1);
-    GetNextStepText("pop_node_list_size_1");
+    GetNextStepText('pop_node_list_size_1');
     return [EndPopping, []];
 }
 async function QueueSizeIs2() {
@@ -1182,7 +1083,7 @@ async function QueueSizeIs2() {
     version.size = 1;
     highlighters.Clear();
     HighlightVersion(_versions.length - 1);
-    GetNextStepText("pop_node_list_size_2");
+    GetNextStepText('pop_node_list_size_2');
     return [EndPopping, []];
 }
 async function DefineNewHead([parent_version_num]) {
@@ -1191,7 +1092,7 @@ async function DefineNewHead([parent_version_num]) {
     let operational_node = parent_version.operational_list;
     highlighters.Clear(false);
     highlighters.AddDynamicNode([operational_node], true);
-    GetNextStepText("define_new_head_1", _dynamic_nodes[operational_node].label);
+    GetNextStepText('define_new_head_1', _dynamic_nodes[operational_node].label);
     return [DefineNewHead2, [parent_version_num]];
 }
 async function DefineNewHead2([parent_version_num]) {
@@ -1202,7 +1103,7 @@ async function DefineNewHead2([parent_version_num]) {
 
     highlighters.Clear(false);
     highlighters.AddDynamicNode([next_operational_list], true);
-    GetNextStepText("define_new_head_2", _dynamic_nodes[next_operational_list].label);
+    GetNextStepText('define_new_head_2', _dynamic_nodes[next_operational_list].label);
     return [DefineNewHead3, [parent_version_num]];
 }
 async function DefineNewHead3([parent_version_num]) {
@@ -1215,7 +1116,7 @@ async function DefineNewHead3([parent_version_num]) {
     highlighters.Clear(false);
     highlighters.AddMainNode([new_head], true);
 
-    GetNextStepText("define_new_head_3", _dynamic_nodes[next_operational_list].label, _main_nodes[new_head].label);
+    GetNextStepText('define_new_head_3', _dynamic_nodes[next_operational_list].label, _nodes[new_head].label);
     return [ShowNewVersion, [parent_version_num]];
 }
 async function ShowNewVersion([parent_version_num]) {
@@ -1225,7 +1126,7 @@ async function ShowNewVersion([parent_version_num]) {
     version.operational_list = _dynamic_nodes[parent_version.operational_list].next_list;
     version.size = parent_version.size - 1;
     version.operational_list_size = parent_version.operational_list_size - 1;
-    GetNextStepText("pop_node");
+    GetNextStepText('pop_node');
     highlighters.Clear(false);
     highlighters.AddMainNode([version.head]);
     highlighters.AddDynamicNode([version.operational_list], true);
@@ -1233,8 +1134,8 @@ async function ShowNewVersion([parent_version_num]) {
     return [DynamicListProbableChange, [_versions.length - 1]];
 }
 async function EndPopping() {
-    GetNextStepText("ended_popping");
-    return ["End", []];
+    GetNextStepText('ended_popping');
+    return ['End', []];
 }
 
 
@@ -1286,9 +1187,11 @@ async function Debug() {
 function HideAll() {
     let allElements = document.querySelectorAll('body > *');
     for (let element of allElements) {
-        element.hidden = true;
+        element.style.display = 'none';
     }
-    document.getElementById('banan').style.visibility = 'visible';
+    let banan = document.getElementById('banan');
+    banan.style.visibility = 'visible';
+    banan.style.display = 'flex';
 }
 
 async function WaitForNextAction() {
@@ -1297,155 +1200,120 @@ async function WaitForNextAction() {
     }
     if (next_step_required) {
         next_step_required = false;
-        return "next";
-    } else {
-        previous_step_required = false;
-        return "prev";
+        return 'next';
     }
+    previous_step_required = false;
+    return 'prev';
 }
 function NextStep() {
-    if (step_by_step_is_active) {
-        next_step_required = true
-    }
+    next_step_required = (step_by_step_is_active) ? true : next_step_required;
 }
 function PreviousStep() {
-    if (step_by_step_is_active) {
-        previous_step_required = true
-    }
+    previous_step_required = (step_by_step_is_active) ? true : previous_step_required;
 }
 
 function PrepareStepByStepLayout() {
     document.getElementById('push_form').hidden = true;
     document.getElementById('pop_form').hidden = true;
     document.getElementById('debug_button').hidden = true;
-    document.getElementById('step_by_step_cont').hidden = true;
+    document.getElementById('step_by_step_container').hidden = true;
     document.getElementById('update_layout_button').hidden = true;
     document.getElementById('next_step_button').hidden = false;
     document.getElementById('previous_step_button').hidden = false;
+    document.getElementById('help_text').hidden = false;
 }
 function ReturnFromStepByStepLayout() {
     document.getElementById('push_form').hidden = false;
     document.getElementById('pop_form').hidden = false;
     document.getElementById('debug_button').hidden = false;
-    document.getElementById('step_by_step_cont').hidden = false;
+    document.getElementById('step_by_step_container').hidden = false;
     document.getElementById('update_layout_button').hidden = false;
     document.getElementById('next_step_button').hidden = true;
     document.getElementById('previous_step_button').hidden = true;
+    document.getElementById('help_text').hidden = true;
 }
 
 function SetupVersionSVG() {
     ver_svg = d3.select('#versions_svg');
 
-    ver_svg.attr('width', ver_width)
-        .attr('height', ver_height)
-        .style('background', 'black')
+    ver_svg.append('g')
+        .attr('id', 'ver_links')
+        .attr('class', 'links');
 
     ver_svg.append('g')
-        .attr('class', 'links')
-
-    ver_svg.append('g')
+        .attr('id', 'ver_nodes')
         .attr('class', 'nodes')
-        .attr('id', 'nodes')
         .selectAll('circle')
         .data(_versions)
         .enter().append('circle')
         .attr('r', 10)
         .attr('class', 'version_node')
-        .attr('id', function (node) {
-            return node.id
-        })
+        .attr('id', node => node.id)
         .on('click', VersionClick)
         .on('mouseover', PopupMouseOverVersionNode)
-        .on('mouseout', PopupMouseOutVersionNode)
+        .on('mouseout', PopupMouseOutVersionNode);
 
     ver_svg.append('g')
+        .attr('id', 'ver_texts')
         .attr('class', 'texts')
         .selectAll('text')
         .data(_versions)
         .enter().append('text')
-        .text(function (node) {
-            return node.label
-        })
+        .text(node => node.label)
         .attr('class', 'version_text')
         .attr('dx', 7)
-        .attr('dy', 20)
+        .attr('dy', 20);
 
     ver_sim = d3
-        .forceSimulation()
-
-    const markerBoxWidth = 10;
-    const markerBoxHeight = 10;
-    const refX = markerBoxWidth / 2;
-    const refY = markerBoxHeight / 2;
-    const markerWidth = markerBoxWidth / 2;
-    const markerHeight = markerBoxHeight / 2;
-    const arrowPoints = [[0, 0], [0, 8], [5, 4]];
-
-    ver_svg
-        .append('defs')
-        .append('marker')
-        .attr('id', 'arrow')
-        .attr('viewBox', [0, 0, markerBoxWidth, markerBoxHeight])
-        .attr('refX', refX)
-        .attr('refY', refY)
-        .attr('markerWidth', markerWidth)
-        .attr('markerHeight', markerHeight)
-        .attr('orient', 'auto-start-reverse')
-        .append('path')
-        .attr('d', d3.line()(arrowPoints))
-        .attr('stroke', 'black');
+        .forceSimulation();
 
     MakeMovableVersions();
 }
 function MakeMovableVersions() {
-    let nodeElements = ver_svg.select('g.nodes').selectAll("circle")
-    let textElements = ver_svg.select('g.texts').selectAll("text")
+    let nodeElements = ver_svg.select('g.nodes').selectAll('circle');
+    let textElements = ver_svg.select('g.texts').selectAll('text');
 
     ver_sim.nodes(_versions).on('tick', () => {
         nodeElements
-            .attr('cx', function (node) {
-                return node.x
-            })
-            .attr('cy', function (node) {
-                return node.y
-            })
+            .attr('cx', node => node.x)
+            .attr('cy', node => node.y);
         textElements
-            .attr('x', function (node) {
-                return node.x
-            })
-            .attr('y', function (node) {
-                return node.y
-            })
-    })
+            .attr('x', node => node.x)
+            .attr('y', node => node.y);
+    });
 }
 function UpdateVersionsLayout() {
-    let g_nodes = ver_svg.select('g.nodes')
+    let g_nodes = ver_svg
+        .select('g.nodes')
         .selectAll('circle')
         .data(_versions, d => d.id);
-    g_nodes.exit().remove();
     g_nodes
-        .enter().append('circle')
+        .exit()
+        .remove();
+    g_nodes
+        .enter()
+        .append('circle')
         .attr('r', 10)
         .attr('class', 'version_node')
-        .attr('id', function (node) {
-            return node.id
-        })
+        .attr('id', node => node.id)
         .on('click', VersionClick)
         .on('mouseover', PopupMouseOverVersionNode)
-        .on('mouseout', PopupMouseOutVersionNode)
+        .on('mouseout', PopupMouseOutVersionNode);
 
-    let g_texts = ver_svg.select('g.texts')
+    let g_texts = ver_svg
+        .select('g.texts')
         .selectAll('text')
         .data(_versions, d => d.id);
-    g_texts.exit().remove();
     g_texts
-        .enter().append('text')
-        .text(function (node) {
-            return node.label
-        })
+        .exit()
+        .remove();
+    g_texts
+        .enter()
+        .append('text')
+        .text(node => node.label)
         .attr('class', 'version_text')
         .attr('dx', 7)
-        .attr('dy', 20)
+        .attr('dy', 20);
 
     MakeMovableVersions();
 
@@ -1464,56 +1332,32 @@ async function UpdateVersionsLayout__NoPhysics() {
 function SetupMainSVG() {
     main_svg = d3.select('#main_svg');
 
-    main_svg.attr('width', main_width)
-        .attr('height', main_height)
-        .style('background', 'cyan')
-
-    linkForce = d3
+    main_linkForce = d3
         .forceLink()
-        .id(function (link) {
-            return link.id
-        })
-        .strength(function (link) {
-            return link.strength
-        })
+        .id(link => link.id)
+        .strength(link => link.strength);
+
+    let main = document.getElementById('main_svg').getBoundingClientRect();
+    let main_width = main.width;
+    let main_height = main.height;
 
     main_sim = d3
         .forceSimulation()
-        .force('link', linkForce)
+        .force('link', main_linkForce)
         .force('charge', d3.forceManyBody().strength(-50))
-        .force('center', d3.forceCenter(main_width / 2, main_height / 2))
+        .force('center', d3.forceCenter(main_width / 2, main_height / 2));
 
     main_svg.append('g')
-        .attr('class', 'links')
+        .attr('id', 'main_links')
+        .attr('class', 'links');
 
     main_svg.append('g')
-        .attr('id', 'nodes')
-        .attr('class', 'nodes')
-        .selectAll('circle')
-        .data(_main_nodes)
-        .enter().append('circle')
-        .attr('r', 10)
-        .attr('class', 'regular_node')
-        .attr('id', function (node) {
-            return node.id
-        })
-        .on('mouseover', PopupMouseOverMainNode)
-        .on('mouseout', PopupMouseOutMainNode)
+        .attr('id', 'main_nodes')
+        .attr('class', 'nodes');
 
     main_svg.append('g')
-        .attr('class', 'texts')
-        .selectAll('text')
-        .data(_main_nodes)
-        .enter().append('text')
-        .text(function (node) {
-            return node.label
-        })
-        .attr('class', 'graph_text')
-        .attr('id', function (node) {
-            return node.id
-        })
-        .attr('dx', 10)
-        .attr('dy', -7)
+        .attr('id', 'main_texts')
+        .attr('class', 'texts');
 
     main_zoom = d3.zoom()
         .scaleExtent([0.2, 5])
@@ -1522,8 +1366,8 @@ function SetupMainSVG() {
     d3.select('#main_svg')
         .call(main_zoom);
 
-    const markerBoxWidth = 8;
-    const markerBoxHeight = 5;
+    const markerBoxWidth = 10;
+    const markerBoxHeight = 10;
     const refX = markerBoxWidth / 2;
     const refY = markerBoxHeight / 2;
     const markerWidth = markerBoxWidth / 2;
@@ -1546,86 +1390,76 @@ function SetupMainSVG() {
 
     MakeMovableMain();
 
-    main_sim.force('link').links(_links)
+    main_sim.force('link').links(_links);
 }
 function MakeMovableMain() {
-    let linkElements = main_svg.select('g.links').selectAll("line")
-    let nodeElements = main_svg.select('g.nodes').selectAll("circle")
-    let textElements = main_svg.select('g.texts').selectAll("text")
+    let linkElements = main_svg.select('g.links').selectAll('line');
+    let nodeElements = main_svg.select('g.nodes').selectAll('circle');
+    let textElements = main_svg.select('g.texts').selectAll('text');
 
-    main_sim.nodes(_main_nodes).on('tick', () => {
+    main_sim.nodes(_nodes).on('tick', () => {
         nodeElements
-            .attr('cx', function (node) {
-                return node.x
-            })
-            .attr('cy', function (node) {
-                return node.y
-            })
+            .attr('cx', node => node.x)
+            .attr('cy', node => node.y);
         textElements
-            .attr('x', function (node) {
-                return node.x
-            })
-            .attr('y', function (node) {
-                return node.y
-            })
+            .attr('x', node => node.x)
+            .attr('y', node => node.y);
         linkElements
-            .attr('x1', function (link) {
-                return link.source.x
-            })
-            .attr('y1', function (link) {
-                return link.source.y
-            })
+            .attr('x1', link => link.source.x)
+            .attr('y1', link => link.source.y)
             .attr("x2", function (d) {
                 return getTargetNodeCircumferencePoint(d)[0];
             })
             .attr("y2", function (d) {
                 return getTargetNodeCircumferencePoint(d)[1];
-            })
-        // .attr('x2', function (link) {return link.target.x})
-        // .attr('y2', function (link) {return link.target.y})
-    })
+            });
+    });
 }
 function UpdateMainLayout() {
-    let g_links = main_svg.select('g.links')
+    let g_links = main_svg
+        .select('g.links')
         .selectAll('line')
         .data(_links, d => d.id);
-    g_links.exit().remove();
     g_links
-        .enter().append('line')
+        .exit()
+        .remove();
+    g_links
+        .enter()
+        .append('line')
         .attr('class', 'arrow_link')
-        .attr('id', function (link) {
-            return link.id
-        })
+        .attr('id', link => link.id);
 
-    let g_nodes = main_svg.select('g.nodes')
+    let g_nodes = main_svg
+        .select('g.nodes')
         .selectAll('circle')
-        .data(_main_nodes, d => d.id);
-    g_nodes.exit().remove();
+        .data(_nodes, d => d.id);
     g_nodes
-        .enter().append('circle')
+        .exit()
+        .remove();
+    g_nodes
+        .enter()
+        .append('circle')
         .attr('r', 10)
         .attr('class', 'regular_node')
-        .attr('id', function (node) {
-            return node.id
-        })
+        .attr('id', node => node.id)
         .on('mouseover', PopupMouseOverMainNode)
-        .on('mouseout', PopupMouseOutMainNode)
+        .on('mouseout', PopupMouseOutMainNode);
 
-    let g_texts = main_svg.select('g.texts')
+    let g_texts = main_svg
+        .select('g.texts')
         .selectAll('text')
-        .data(_main_nodes, d => d.id);
-    g_texts.exit().remove();
+        .data(_nodes, d => d.id);
     g_texts
-        .enter().append('text')
-        .text(function (node) {
-            return node.label
-        })
+        .exit()
+        .remove();
+    g_texts
+        .enter()
+        .append('text')
+        .text(node => node.label)
         .attr('class', 'graph_text')
-        .attr('id', function (node) {
-            return node.id
-        })
-        .attr("dx", 7)
-        .attr("dy", -10)
+        .attr('id', node => node.id)
+        .attr('dx', 7)
+        .attr('dy', -10);
 
     MakeMovableMain();
 
@@ -1646,58 +1480,34 @@ async function UpdateMainLayout__NoPhysics() {
 function SetupSecondarySVG() {
     sec_svg = d3.select('#secondary_svg');
 
-    sec_svg.attr('width', sec_width)
-        .attr('height', sec_height)
-        .style('position', 'absolute')
-        .style('margin-left', '5px')
-        .style('background', 'aquamarine')
-
     sec_linkForce = d3
         .forceLink()
-        .id(function (link) {
-            return link.id
-        })
-        .strength(function (link) {
-            return link.strength
-        })
+        .id(link => link.id)
+        .strength(link => link.strength);
+
+    let sec = document.getElementById('secondary_svg').getBoundingClientRect();
+    let sec_width = sec.width;
+    let sec_height = sec.height;
 
     sec_sim = d3
         .forceSimulation()
         .force('link', sec_linkForce)
         .force('charge', d3.forceManyBody().strength(-50))
-        .force('center', d3.forceCenter(sec_width / 2, sec_height / 2))
+        .force('center', d3.forceCenter(sec_width / 2, sec_height / 2));
+
+    sec_svg
+        .append('g')
+        .attr('id', 'sec_links')
+        .attr('class', 'links');
+
+    sec_svg
+        .append('g')
+        .attr('id', 'sec_nodes')
+        .attr('class', 'nodes');
 
     sec_svg.append('g')
-        .attr('class', 'links')
-
-    sec_svg.append('g')
-        .attr('id', 'nodes')
-        .attr('class', 'nodes')
-        .selectAll('circle')
-        .data(_dynamic_nodes)
-        .enter().append('circle')
-        .attr('r', 10)
-        .attr('class', 'regular_node')
-        .attr('id', function (node) {
-            return node.id
-        })
-        .on('mouseover', PopupMouseOverDynamicNode)
-        .on('mouseout', PopupMouseOutDynamicNode)
-
-    sec_svg.append('g')
-        .attr('class', 'texts')
-        .selectAll('text')
-        .data(_dynamic_nodes)
-        .enter().append('text')
-        .text(function (node) {
-            return node.label
-        })
-        .attr('class', 'graph_text')
-        .attr('id', function (node) {
-            return node.id
-        })
-        .attr('dx', 10)
-        .attr('dy', -7)
+        .attr('id', 'sec_texts')
+        .attr('class', 'texts');
 
     sec_zoom = d3.zoom()
         .scaleExtent([0.2, 5])
@@ -1706,110 +1516,78 @@ function SetupSecondarySVG() {
     d3.select('#secondary_svg')
         .call(sec_zoom);
 
-    const markerBoxWidth = 8;
-    const markerBoxHeight = 5;
-    const refX = markerBoxWidth / 2;
-    const refY = markerBoxHeight / 2;
-    const markerWidth = markerBoxWidth / 2;
-    const markerHeight = markerBoxHeight / 2;
-    const arrowPoints = [[0, 0], [0, 8], [5, 4]];
-
-    sec_svg
-        .append('defs')
-        .append('marker')
-        .attr('id', 'arrow')
-        .attr('viewBox', [0, 0, markerBoxWidth, markerBoxHeight])
-        .attr('refX', refX)
-        .attr('refY', refY)
-        .attr('markerWidth', markerWidth)
-        .attr('markerHeight', markerHeight)
-        .attr('orient', 'auto-start-reverse')
-        .append('path')
-        .attr('d', d3.line()(arrowPoints))
-        .attr('stroke', 'black');
-
     MakeMovableSecondary();
 
-    sec_sim.force('link').links(_dynamic_links)
+    sec_sim.force('link').links(_dynamic_links);
 }
 function MakeMovableSecondary() {
-    let linkElements = sec_svg.select('g.links').selectAll("line")
-    let nodeElements = sec_svg.select('g.nodes').selectAll("circle")
-    let textElements = sec_svg.select('g.texts').selectAll("text")
+    let linkElements = sec_svg.select('g.links').selectAll('line');
+    let nodeElements = sec_svg.select('g.nodes').selectAll('circle');
+    let textElements = sec_svg.select('g.texts').selectAll('text');
 
     sec_sim.nodes(_dynamic_nodes).on('tick', () => {
         nodeElements
-            .attr('cx', function (node) {
-                return node.x
-            })
-            .attr('cy', function (node) {
-                return node.y
-            })
+            .attr('cx', node => node.x)
+            .attr('cy', node => node.y);
         textElements
-            .attr('x', function (node) {
-                return node.x
-            })
-            .attr('y', function (node) {
-                return node.y
-            })
+            .attr('x', node => node.x)
+            .attr('y', node => node.y);
         linkElements
-            .attr('x1', function (link) {
-                return link.source.x
-            })
-            .attr('y1', function (link) {
-                return link.source.y
-            })
-            .attr("x2", function (d) {
+            .attr('x1', link => link.source.x)
+            .attr('y1', link => link.source.y)
+            .attr('x2', function (d) {
                 return getTargetNodeCircumferencePoint(d)[0];
             })
-            .attr("y2", function (d) {
+            .attr('y2', function (d) {
                 return getTargetNodeCircumferencePoint(d)[1];
-            })
-        // .attr('x2', function (link) {return link.target.x})
-        // .attr('y2', function (link) {return link.target.y})
-    })
+            });
+    });
 }
 function UpdateSecondaryLayout() {
-    let g_links = sec_svg.select('g.links')
+    let g_links = sec_svg
+        .select('g.links')
         .selectAll('line')
         .data(_dynamic_links, d => d.id);
-    g_links.exit().remove();
     g_links
-        .enter().append('line')
+        .exit()
+        .remove();
+    g_links
+        .enter()
+        .append('line')
         .attr('class', 'arrow_link')
-        .attr('id', function (link) {
-            return link.id
-        })
+        .attr('id', link => link.id);
 
-    let g_nodes = sec_svg.select('g.nodes')
+    let g_nodes = sec_svg
+        .select('g.nodes')
         .selectAll('circle')
         .data(_dynamic_nodes, d => d.id);
-    g_nodes.exit().remove();
     g_nodes
-        .enter().append('circle')
+        .exit()
+        .remove();
+    g_nodes
+        .enter()
+        .append('circle')
         .attr('r', 10)
         .attr('class', 'regular_node')
-        .attr('id', function (node) {
-            return node.id
-        })
+        .attr('id', node => node.id)
         .on('mouseover', PopupMouseOverDynamicNode)
-        .on('mouseout', PopupMouseOutDynamicNode)
+        .on('mouseout', PopupMouseOutDynamicNode);
 
-    let g_texts = sec_svg.select('g.texts')
+    let g_texts = sec_svg
+        .select('g.texts')
         .selectAll('text')
         .data(_dynamic_nodes, d => d.id);
-    g_texts.exit().remove();
     g_texts
-        .enter().append('text')
-        .text(function (node) {
-            return node.label
-        })
+        .exit()
+        .remove();
+    g_texts
+        .enter()
+        .append('text')
+        .text(node => node.label)
         .attr('class', 'graph_text')
-        .attr('id', function (node) {
-            return node.id
-        })
-        .attr("dx", 7)
-        .attr("dy", -10)
+        .attr('id', node => node.id)
+        .attr('dx', 7)
+        .attr('dy', -10);
 
     MakeMovableSecondary();
 
@@ -1829,13 +1607,11 @@ async function UpdateSecondaryLayout__NoPhysics() {
 
 async function UpdateLayout() {
     is_updating_layout = true;
-    console.log(`Started updating layout`);
     UpdateVersionsLayout();
     UpdateMainLayout();
     UpdateSecondaryLayout();
     await sleep(simulation_time);
     StopUpdatingLayout();
-    console.log(`Ended reshaping layout`);
 }
 function StopUpdatingLayout() {
     if (is_updating_layout) {
@@ -1856,7 +1632,7 @@ async function Setup() {
     BindStepByStepToggler();
 
     _versions.push(new Version(0, 0, null, null, 0, 0, 0, 0, 'N', null, 25, 25));
-    _main_nodes.push(new Node(null, 0, 'Null', 40, 40));
+    _nodes.push(new Node(null, 0, 'Null', 40, 40));
     _dynamic_nodes.push(new ListNode(null, null, 0, 'Null', 40, 40));
 
     SetupVersionSVG();
@@ -1867,7 +1643,7 @@ async function Setup() {
     StopUpdatingLayout();
 }
 function BindLocaleSwitcher() {
-    let switcher = document.querySelector("[id=locale_switcher]");
+    let switcher = document.querySelector('[id=locale_switcher]');
     switcher.onchange = (event) => {
         SetLocale(event.target.value);
     };
@@ -1882,7 +1658,7 @@ function SetLocale(new_locale) {
     });
 }
 function BindStepByStepToggler() {
-    let switcher = document.querySelector("[id=step_by_step_toggle_checkbox]");
+    let switcher = document.querySelector('[id=step_by_step_toggle_checkbox]');
     switcher.onchange = (event) => {
         step_by_step_is_active = !step_by_step_is_active;
     };
@@ -1903,7 +1679,6 @@ function HighlightVersion(version_num) {
     }
 }
 function VersionClick(event, object) {
-    console.log(`Version ${object.id} was clicked.`);
     let version = _versions[object.id];
 
     if (chosen_version === version.id) { // Version is same, return graph to default
@@ -1998,9 +1773,9 @@ function VersionClick(event, object) {
         }
         curr_text.attr('class', 'graph_text');
         curr_link = main_svg.select('g.links')
-            .select("[id='" + (_main_nodes[Number(curr_node.attr('id'))].son_id - 1) + "']");
+            .select("[id='" + (_nodes[Number(curr_node.attr('id'))].son_id - 1) + "']");
         curr_node = main_svg.select('g.nodes')
-            .select("[id='" + _main_nodes[Number(curr_node.attr('id'))].son_id + "']");
+            .select("[id='" + _nodes[Number(curr_node.attr('id'))].son_id + "']");
         curr_text = main_svg.select('g.texts')
             .select("[id='" + curr_node.attr('id') + "']");
     }
@@ -2083,15 +1858,14 @@ function VersionClick(event, object) {
 }
 
 function PopupMouseOverVersionNode(event, object) {
-    console.log('Mouse in version node');
     let popup = document.getElementById('version_node_popup');
-    let a = document.querySelector(`#versions_svg #nodes [id="${object.id}"]`).getBoundingClientRect();
+    let a = document.querySelector(`#versions_svg #ver_nodes [id='${object.id}']`).getBoundingClientRect();
     let x_coord = a.left;
     let y_coord = a.bottom + 18;
     popup.style.left = x_coord + 'px';
     popup.style.top = y_coord + 'px';
-    let head = _main_nodes[object.head].label;
-    let tail = _main_nodes[object.tail].label;
+    let head = _nodes[object.head].label;
+    let tail = _nodes[object.tail].label;
     let leading_dynamic = object.dynamic_list !== null ? _dynamic_nodes[object.dynamic_list].label : 'Null';
     let leading_operational = object.operational_list !== null ? _dynamic_nodes[object.operational_list].label : 'Null';
     document.getElementById('head_id').innerHTML = ' ' + head;
@@ -2102,47 +1876,42 @@ function PopupMouseOverVersionNode(event, object) {
     popup.classList.add('show_popup');
 }
 function PopupMouseOutVersionNode() {
-    console.log('Mouse out version node');
-    let popup = document.getElementById("version_node_popup");
+    let popup = document.getElementById('version_node_popup');
     popup.classList.remove('show_popup');
     popup.classList.add('hide_popup');
 }
 function PopupMouseOverMainNode(event, object) {
-    console.log('Mouse in main node');
     let popup = document.getElementById('main_node_popup');
-    let a = document.querySelector(`#main_svg #nodes [id="${object.id}"]`).getBoundingClientRect();
+    let a = document.querySelector(`#main_svg #main_nodes [id='${object.id}']`).getBoundingClientRect();
     let x_coord = a.left;
     let y_coord = a.bottom + 10;
     popup.style.left = x_coord + 'px';
     popup.style.top = y_coord + 'px';
-    let son_id = object.son_id !== null ? _main_nodes[object.son_id].label : 'Null';
+    let son_id = object.son_id !== null ? _nodes[object.son_id].label : 'Null';
     document.getElementById('main_node_son_id').innerHTML = ' ' + son_id;
     popup.classList.remove('hide_popup');
     popup.classList.add('show_popup');
 }
 function PopupMouseOutMainNode() {
-    console.log('Mouse out main node');
     let popup = document.getElementById('main_node_popup');
     popup.classList.add('hide_popup');
     popup.classList.remove('show_popup');
 }
 function PopupMouseOverDynamicNode(event, object) {
-    console.log('Mouse in dynamic node');
     let popup = document.getElementById('dynamic_node_popup');
-    let a = document.querySelector(`#secondary_svg #nodes [id="${object.id}"]`).getBoundingClientRect();
+    let a = document.querySelector(`#secondary_svg #sec_nodes [id='${object.id}']`).getBoundingClientRect();
     let x_coord = a.left;
     let y_coord = a.bottom + 10;
     popup.style.left = x_coord + 'px';
     popup.style.top = y_coord + 'px';
     let son = object.next_list !== null ? _dynamic_nodes[object.next_list].label : 'Null';
-    let target_node = object.target_node !== null ? _main_nodes[object.target_node].label : 'Null';
+    let target_node = object.target_node !== null ? _nodes[object.target_node].label : 'Null';
     document.getElementById('dynamic_node_son_id').innerHTML = ' ' + son;
     document.getElementById('dynamic_node_target_id').innerHTML = ' ' + target_node;
     popup.classList.remove('hide_popup');
     popup.classList.add('show_popup');
 }
 function PopupMouseOutDynamicNode() {
-    console.log('Mouse out dynamic node');
     let popup = document.getElementById('dynamic_node_popup');
     popup.classList.add('hide_popup');
     popup.classList.remove('show_popup');
@@ -2163,11 +1932,9 @@ function GetNextStepText() {
     });
 }
 
-
-
-
-
-
-
-
-
+function OpenSideBar() {
+    document.getElementById('side_bar').classList.add('open');
+}
+function CloseSideBar() {
+    document.getElementById('side_bar').classList.remove('open');
+}
