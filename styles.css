@@ -2,15 +2,23 @@
     width: 1600px;
     height: 58px;
     overflow: scroll;
+    border-radius: 10px;
+}
+
+.main_dynamic_container {
+    margin-top: 5px;
+    width: 1600px;
+    height: 500px;
+    border-radius: 20px;
 }
 
 
-[class=arrow_link] {
+.arrow_link {
     stroke-width: 3px;
     stroke: rgba(50, 50, 50, 0.2);
     marker-end: url(#arrow);
 }
-[class=faint_arrow_link] {
+.faint_arrow_link {
     stroke-width: 3px;
     stroke: rgba(50, 50, 50, 0.2);
     marker-end: url(#arrow);
@@ -44,7 +52,8 @@
     stroke: black;
     stroke-width: 1px;
 }
-[class=tail_node] {
+.tail_node {
+    animation: none;
     fill: red;
     stroke: black;
     stroke-width: 1px;
@@ -135,7 +144,11 @@
 }
 
 .blink_node {
-    animation: blinking 1s infinite alternate ease-in-out;
+    animation: blinking 0.5s infinite alternate ease-in-out;
+}
+
+.blink_link {
+    animation: blinking 0.5s infinite alternate ease-in-out;
 }
 
 @keyframes blinking {

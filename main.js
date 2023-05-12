@@ -1,7 +1,6 @@
 //TODO
 // Поправить сохранение каждого состояния, кажется сейчас это не так эффективно
-// Возможен визуальный (а может и технический, хз) баг при постоянных возвратах/переходах вперед при пошаговой раскладке,
-// добавленные ноды не крепятся к своим линкам. Не уверен, что починил его.
+//TODO
 // Визуально доработать таблички с поинтерами для версий, чтобы они были отцентрированы по вертикали
 //
 
@@ -16,7 +15,7 @@ let _versions = [];
 let ver_svg;
 let ver_sim;
 let ver_width = 5000;
-let ver_height = 50;
+let ver_height = 58;
 
 
 let main_svg;
@@ -46,6 +45,7 @@ let next_step_required = false;
 let previous_step_required = false;
 let is_first_swap = true;
 let is_push = true;
+let highlighters;
 
 let chosen_version = -1;
 
@@ -61,64 +61,97 @@ let text_container_en = new Map([
         'We start from copying all old version parameters into new one, so we can change it.\n' +
         'All further changes will be applied to the new version.'],
 
-    ['push_new_node',
-        'Now we link our new node {1} to the tail of new version in main tree.\n' +
-        'Version tail pointer has changed to the new node as well.'],
+    ['define_tail_node_to_link',
+        'We want to link our new node to the tail of new version in main tree.\n' +
+        'It\'s node {1}, which we can get from version pointers.'],
 
-    ['check_list_size',
+    ['push_new_node',
+        'Now we link our new node {1} to the defined tail.\n' +
+        'Also, we change version\'s tail pointer to the new node.'],
+
+    ['dynamic_list_probable_change',
         'Next step is probable change of auxiliary lists.\n' +
         'We compare new number of untracked queue nodes (black ones) with corresponding version\'s operational list size (blue nodes).'],
 
-    ['list_size_ok',
+    ['list_size_nothing_changes',
         'Operational list size is {1}, untracked nodes amount is {2}.\n' +
         'List has bigger or same size as 1/2 of untracked nodes amount.\n' +
         'Nothing needs to be changed.'],
 
-    ['list_size_needs_remaster',
+    ['list_size_needs_changes',
         'Operational list size is {1}, untracked nodes amount is {2}.\n' +
         'List has lesser size comparing to 1/2 of untracked nodes amount.\n' +
-        'We check if it\'s possible to swap operational and dynamic lists (in case, previous pop gave us possibility to do so).'],
+        'We check if it\'s possible to swap operational and dynamic lists.'],
 
     ['swap_success',
         'We successfully swapped lists, now dynamic list is empty.\n' +
         'Nothing else needs to be done.'],
 
-    ['swap_failure',
+    ['first_swap_failed',
+        'Version head is node {1}, which isn\'t same node which we got earlier.\n' +
         'We couldn\'t swap lists, so we need to create new additional dynamic list node.'],
 
-    ['check_lists_swap_null',
+    ['dynamic_list_is_null',
         'We check if dynamic list reached corresponding version head.\n' +
         'In our case, dynamic list doesn\'t exist at all.'],
 
-    ['check_lists_swap_',
-        'We check if dynamic list reached corresponding version head.\n' +
-        'In our case, version head is node {1}.\n' +
+    ['get_leading_dynamic_node',
+        'To swap lists we have to check if dynamic list reached corresponding version head.\n' +
         'We perform following operations:\n' +
-        '1) Get dynamic list node - it\'s node {2}.\n' +
-        '2) Get it\'s targeted node in main tree - it\'s node {3}.\n' +
-        '3) Get targeted node son - it\'s node {4}'],
+        '1) Get leading dynamic list node - it\'s node {1}.\n'],
 
-    ['lists_swap_ok',
-        'Dynamic list didn\'t reach list head, nothing changes.'],
+    ['get_targeted_main_node',
+        'To swap lists we have to check if dynamic list reached corresponding version head.\n' +
+        'We perform following operations:\n' +
+        '1) Get leading dynamic list node - it\'s node {1}.\n' +
+        '2) Get it\'s targeted node in main tree - it\'s node {2}.\n'],
 
-    ['lists_swap_needed',
-        'We got the same nodes, that means dynamic list has reached version head.\n' +
+    ['get_targeted_node_son',
+        'To swap lists we have to check if dynamic list reached corresponding version head.\n' +
+        'We perform following operations:\n' +
+        '1) Get leading dynamic list node - it\'s node {1}.\n' +
+        '2) Get it\'s targeted node in main tree - it\'s node {2}.\n' +
+        '3) Get targeted node son - it\'s node {3}'],
+
+    ['second_swap_failed',
+        'Version head is node {1}, which isn\'t same node which we got earlier.\n' +
+        'That means, dynamic list didn\'t reach list head, nothing changes.'],
+
+    ['reached_head_swap_confirmed',
+        'Version head is node {1}, which is the same as we got earlier.\n' +
+        'That means dynamic list has reached version head.\n' +
         'So we treat dynamic list as operational (e.g. swap them).'],
 
     ['define_targeted_node_1',
         'To do so, we need to define targeted node in main tree.\n' +
         'We make following operations:\n' +
+        '1) Get current dynamic list node - it\'s node {1}.'],
+
+    ['define_targeted_node_2',
+        'To do so, we need to define targeted node in main tree.\n' +
+        'We make following operations:\n' +
+        '1) Get current dynamic list node - it\'s node {1}.\n' +
+        '2) Get from it targeted node in main tree - it\'s node {2}.'],
+
+    ['define_targeted_node_3',
+        'To do so, we need to define targeted node in main tree.\n' +
+        'We make following operations:\n' +
         '1) Get current dynamic list node - it\'s node {1}.\n' +
         '2) Get from it targeted node in main tree - it\'s node {2}.\n' +
         '3) Get from targeted node it\'s son - node {3}.\n' +
-        'So, now we know the targeted node for creating new dynamic node.\n '],
+        'So, now we know the targeted node for creating new dynamic node.'],
 
-    ['define_targeted_node_2',
+    ['define_targeted_node_null',
+        'To do so, we need to define targeted node in main tree.\n' +
+        'We just need to get son of the tail node:\n' +
+        '1) Current tail is node {1}.\n'],
+
+    ['define_targeted_node_null2',
         'To do so, we need to define targeted node in main tree.\n' +
         'We just need to get son of the tail node:\n' +
         '1) Current tail is node {1}.\n' +
         '2) We get it\'s son - node {2}.\n' +
-        'So, now we know the targeted node for creating new dynamic node.\n'],
+        'So, now we know the targeted node for creating new dynamic node.'],
 
     ['add_new_dynamic_node_1',
         'This way, we created new dynamic node.\n' +
@@ -152,11 +185,15 @@ let text_container_en = new Map([
     ['define_new_head_1',
         'We want to define, which node will be next head.\n' +
         'Since we have more than 2 nodes in queue, we can\'t do it straightforwardly.\n' +
-        'So we will refer to our leading operational list node.'],
+        'So we will refer to our leading operational list node - node {1}.'],
 
     ['define_new_head_2',
         'This operational node has two important parameters:\n' +
-        '1) next operational node (it\'s son) - node {1},\n' +
+        '1) next operational node (it\'s son) - node {1}.'],
+
+    ['define_new_head_3',
+        'This operational node has two important parameters:\n' +
+        '1) next operational node (it\'s son) - node {1}.\n' +
         '2) targeted main queue node - node {2} in main tree.'],
 
     ['pop_node',
@@ -177,14 +214,14 @@ let text_container_ru = new Map([
         'Нам достаточно скопировать в новую версию всю информацию от старой и привязать новую вершину {1} к \'хвосту\' этой версии в главном графе.\n' +
         'Теперь у новой версии изменился \'хвост\'.'],
 
-    ['check_list_size',
+    ['dynamic_list_probable_change',
         'Мы сравниваем новое количество неотслеживаемых вершин (выделены черным цветом) с размером соответствующего операционного списка (выделен голубым цветом).'],
 
-    ['list_size_ok',
+    ['list_size_nothing_changes',
         'Размер операционного списка - {1}, что больше или равно 1/2 от количества неотслеживаемых вершин.\n' +
         'Нет необходимости в изменениях.'],
 
-    ['list_size_needs_remaster',
+    ['list_size_needs_changes',
         'Размер операционного списка - {1}, что меньше чем 1/2 от количества неотслеживаемых вершин.\n' +
         'Проверим, можно ли поменять местами операционный и динамический списки (в случае, если предыдущее удаление вершины дало нам такое возможность).'],
 
@@ -192,14 +229,14 @@ let text_container_ru = new Map([
         'Мы успешно поменяли списки местами, теперь динамический список пуст.\n' +
         'Больше ничего менять не нужно.'],
 
-    ['swap_failure',
+    ['first_swap_failed',
         'Мы не смогли поменять местами списки, поэтому необходимо создать новую вершину для динамического листа.'],
 
-    ['check_lists_swap_null',
+    ['dynamic_list_is_null',
         'Проверим, достиг ли динамический список \'головы\' текущей версии.\n' +
         'В нашем случае, динамический список отсутствует.'],
 
-    ['check_lists_swap_',
+    ['check_lists_swap',
         'Проверим, достиг ли динамический список \'головы\' текущей версии.\n' +
         'В нашем случае \'голова\' текущей версии - вершина {1}.\n' +
         'Проведём следующие операции:\n' +
@@ -207,10 +244,10 @@ let text_container_ru = new Map([
         '2) Из нее узнаем, на какую вершину она указывает в главном графе - это вершина {3}.\n' +
         '3) Осталось только получить сына этой вершины - вершину {4}'],
 
-    ['lists_swap_ok',
+    ['second_swap_failed',
         'Динамический список не достиг \'головы\' текущей версии, ничего не происходит.'],
 
-    ['lists_swap_needed',
+    ['reached_head_swap_confirmed',
         'Мы получили одинаковые вершины, это значит что динамический список достиг \'головы\' текущей версии.\n' +
         'Поэтому, теперь мы принимаем динамический список за операционный (меняем их местами).'],
 
@@ -403,8 +440,150 @@ class Version {
     y;
 }
 
+class Highlighters {
+    constructor(new_main_nodes = null, new_main_links = null, new_dynamic_nodes = null, new_dynamic_links = null) {
+        if (new_main_nodes !== null) {
+            this.main_nodes = new_main_nodes;
+        } else {
+            this.main_nodes = [];
+        }
+        if (new_main_links !== null) {
+            this.main_links = new_main_links;
+        } else {
+            this.main_links = [];
+        }
+        if (new_dynamic_nodes !== null) {
+            this.dynamic_nodes = new_dynamic_nodes;
+        } else {
+            this.dynamic_nodes = [];
+        }
+        if (new_dynamic_links !== null) {
+            this.dynamic_links = new_dynamic_links;
+        } else {
+            this.dynamic_links = [];
+        }
+    }
+
+    main_nodes;
+    dynamic_nodes;
+    main_links;
+    dynamic_links;
+
+
+    AddMainNode(nodes, needs_rehighlighting = false) {
+        for (let node of nodes) {
+            this.main_nodes.push(node);
+        }
+        if (needs_rehighlighting) {
+            this.ReHighlight();
+        }
+    }
+    AddMainLink(links, needs_rehighlighting = false) {
+        for (let link of links) {
+            this.main_links.push(link);
+        }
+        if (needs_rehighlighting) {
+            this.ReHighlight();
+        }
+    }
+    AddDynamicNode(nodes, needs_rehighlighting = false) {
+        for (let node of nodes) {
+            this.dynamic_nodes.push(node);
+        }
+        if (needs_rehighlighting) {
+            this.ReHighlight();
+        }
+    }
+    AddDynamicLink(links, needs_rehighlighting = false) {
+        for (let link of links) {
+            this.dynamic_links.push(link);
+        }
+        if (needs_rehighlighting) {
+            this.ReHighlight();
+        }
+    }
+
+    /*Remove(nodes, links) {
+        if (nodes.length) {
+            for (let node of nodes[0]) {
+                let index = this.nodes[0].indexOf(node);
+                this.nodes[0].splice(index, 1)
+            }
+            for (let node of nodes[1]) {
+                let index = this.nodes[1].indexOf(node);
+                this.nodes[1].splice(index, 1)
+            }
+        }
+        if (links.length) {
+            for (let link of links[0]) {
+                let index = this.links[0].indexOf(link);
+                this.links[0].splice(index, 1)
+            }
+            for (let link of links[1]) {
+                let index = this.links[1].indexOf(link);
+                this.links[1].splice(index, 1)
+            }
+        }
+    }*/
+    ReHighlight() {
+        console.warn('Rehighlighting');
+        let main = main_svg.select('g.nodes');
+        for (let i = 0; i < _main_nodes.length; ++i) {
+            let target = main.select("[id='" + i + "']").node();
+            target.classList.remove('blink_node');
+        }
+        let dynamic = sec_svg.select('g.nodes');
+        for (let i = 0; i < _dynamic_nodes.length; ++i) {
+            let target = dynamic.select("[id='" + i + "']").node();
+            target.classList.remove('blink_node');
+        }
+        main = main_svg.select('g.links');
+        for (let i = 0; i < _links.length; ++i) {
+            let target = main.select("[id='" + i + "']").node();
+            target.classList.remove('blink_link');
+        }
+        dynamic = sec_svg.select('g.links');
+        for (let i = 0; i < _dynamic_links.length; ++i) {
+            let target = dynamic.select("[id='" + i + "']").node();
+            target.classList.remove('blink_link');
+        }
+
+
+        main = main_svg.select('g.nodes');
+        for (let node of this.main_nodes) {
+            let target = main.select("[id='" + node + "']").node();
+            target.classList.add('blink_node');
+        }
+        dynamic = sec_svg.select('g.nodes');
+        for (let node of this.dynamic_nodes) {
+            let target = dynamic.select("[id='" + node + "']").node();
+            target.classList.add('blink_node');
+        }
+        main = main_svg.select('g.links');
+        for (let link of this.main_links) {
+            let target = main.select("[id='" + link + "']").node();
+            target.classList.add('blink_link');
+        }
+        dynamic = sec_svg.select('g.links');
+        for (let link of this.dynamic_links) {
+            let target = dynamic.select("[id='" + link + "']").node();
+            target.classList.add('blink_link');
+        }
+    }
+    Clear(needs_rehighlighting = true) {
+        console.warn("Cleaning");
+        this.main_nodes = [];
+        this.dynamic_nodes = [];
+        this.main_links = [];
+        this.dynamic_links = [];
+        if (needs_rehighlighting) {
+            this.ReHighlight();
+        }
+    }
+}
+
 class State {
-    constructor(args, function_call, old_sizes) {
+    constructor(args, function_call, old_sizes, highlighters) {
         if (_main_nodes.length !== old_sizes[0]) {
             this.new_main_node = Object.assign({}, _main_nodes.at(-1));
         }
@@ -421,6 +600,9 @@ class State {
             this.new_version = Object.assign({}, _versions.at(-1));
         }
 
+        this.highlighters = JSON.parse(JSON.stringify(highlighters));
+        console.log(this.highlighters)
+
         this.chosen_version = chosen_version;
         this.is_first_swap = is_first_swap;
         this.overall_id = overall_id;
@@ -434,6 +616,8 @@ class State {
     new_version = null;
     new_dynamic_node = null;
     new_dynamic_link = null;
+
+    highlighters;
 
     chosen_version;
     is_first_swap;
@@ -459,7 +643,9 @@ class State {
             _versions.pop();
         }
         if (this.new_main_node !== null) {
+            console.warn('old', _main_nodes[_main_nodes.length - 1])
             _main_nodes[_main_nodes.length - 1] = Object.assign({}, this.new_main_node);
+            console.warn('new', _main_nodes[_main_nodes.length - 1])
         }
         if (this.new_link !== null) {
             _links[_links.length - 1] = CopyLink(this.new_link);
@@ -468,16 +654,19 @@ class State {
             _dynamic_nodes[_dynamic_nodes.length - 1] = Object.assign({}, this.new_dynamic_node);
         }
         if (this.new_dynamic_link !== null) {
-            _dynamic_links[_dynamic_links.length - 1] = Object.assign({}, this.new_dynamic_link);
+            _dynamic_links[_dynamic_links.length - 1] = CopyLink(this.new_dynamic_link);
         }
         if (this.new_version !== null) {
             _versions[_versions.length - 1] = Object.assign({}, this.new_version);
         }
 
+
+
         chosen_version = this.chosen_version;
         is_first_swap = this.is_first_swap;
         overall_id = this.overall_id;
-        return [this.args, this.function_call];
+        let new_highlighter = new Highlighters(this.highlighters.main_nodes, this.highlighters.main_links, this.highlighters.dynamic_nodes, this.highlighters.dynamic_links);
+        return [this.args, this.function_call, new_highlighter];
     }
 }
 
@@ -668,13 +857,14 @@ async function OperationsCoordinator(parent_version_num) {
         next_function_call = PreparePop;
     }
     let states = [];
+    highlighters = new Highlighters();
     let args = [parent_version_num];
     let old_size = [_main_nodes.length, _links.length, _dynamic_nodes.length, _dynamic_links.length, _versions.length]
 
     let index = -2;
     let action = "";
     while (next_function_call !== "End") {
-        states[index + 2] = new State(args, next_function_call, old_size);
+        states[index + 2] = new State(args, next_function_call, old_size, highlighters);
         console.log("Save state before f_call", next_function_call, "at ind", index + 2);
         ++index;
         console.log("Calling ", next_function_call, args);
@@ -687,9 +877,10 @@ async function OperationsCoordinator(parent_version_num) {
                 action = await WaitForNextAction();
             } else {
                 console.warn("getting previous state ", states[index]);
-                [args, next_function_call] = states[index].RestoreState(old_size);
+                [args, next_function_call, highlighters] = states[index].RestoreState(old_size);
                 console.log("got state before calling ", next_function_call, " at ind ", index);
                 index -= 2;
+                highlighters.ReHighlight();
                 await UpdateLayout__NoPhysics();
                 break;
             }
@@ -724,14 +915,18 @@ async function CopyOldVersion([parent_version_num]) {
     await UpdateVersionsLayout__NoPhysics();
 
     if (is_push) {
-        return [AddMainNode, [parent_version_num]];
+        return [DefineTailNodeToLink, [parent_version_num]];
     }
     return [DefineNodeToPop, [parent_version_num]];
 }
-// async function DefineMainSonNode() { //needs text
-//
-// }
-async function AddMainNode([parent_version_num]) {
+async function DefineTailNodeToLink([parent_version_num]) { //needs text about linking to defined node
+    let parent_version = _versions[parent_version_num];
+    let son = parent_version.tail;
+    highlighters.AddMainNode([son], true);
+    GetNextStepText('define_tail_node_to_link', _main_nodes[son].label);
+    return [LinkNewMainNode, [parent_version_num]];
+}
+async function LinkNewMainNode([parent_version_num]) {
     let parent_version = _versions[parent_version_num];
     let x_coord = _main_nodes[parent_version.tail].x - 30 - GetRandomInt(5);
     let y_coord = _main_nodes[parent_version.tail].y - 30 - GetRandomInt(5);
@@ -746,46 +941,75 @@ async function AddMainNode([parent_version_num]) {
     version.size = parent_version.size + 1;
 
     await UpdateMainLayout__NoPhysics();
+
+    highlighters.Clear(false);
+    highlighters.AddMainNode([new_node]);
+    highlighters.AddMainLink([_links.length - 1], true);
     HighlightVersion(_versions.length - 1)
     GetNextStepText("push_new_node", _main_nodes[new_node].label);
-    return [DefineDynamicListSize, [_versions.length - 1]];
+    return [DynamicListProbableChange, [_versions.length - 1]];
 }
 
-async function DefineDynamicListSize([version_num]) {
-    GetNextStepText("check_list_size");
+async function DynamicListProbableChange([version_num]) {
+    highlighters.Clear();
+    GetNextStepText("dynamic_list_probable_change");
     return [CheckDynamicListSize, [version_num]];
 }
 async function CheckDynamicListSize([version_num]){
     let version = _versions[version_num];
     let untracked_nodes_amount = Math.max(0, version.size - 2);
     if (version.operational_list_size * 2 >= untracked_nodes_amount) {
-        GetNextStepText("list_size_ok", version.operational_list_size, untracked_nodes_amount);
+        GetNextStepText("list_size_nothing_changes", version.operational_list_size, untracked_nodes_amount);
         if (is_push) {
             return [EndPushing, []];
         }
         return [EndPopping, []];
     } else {
-        GetNextStepText("list_size_needs_remaster", version.operational_list_size, untracked_nodes_amount);
-        return [CheckListsSwap, [version_num]];
+        GetNextStepText("list_size_needs_changes", version.operational_list_size, untracked_nodes_amount);
+        return [TrySwappingLists, [version_num]];
     }
 }
-async function CheckListsSwap([version_num]) {
+
+async function TrySwappingLists([version_num]) {
+    highlighters.Clear();
     let version = _versions[version_num];
     if (version.dynamic_list === null) {
         is_first_swap = false;
-        GetNextStepText("check_lists_swap_null");
+        GetNextStepText("dynamic_list_is_null");
         return [TargetedNodeDefining, [version_num]];
     } else {
-        let head = version.head;
         let dynamic_list = version.dynamic_list;
-        let targeted_node = _dynamic_nodes[version.dynamic_list].target_node;
-        let targeted_node_son = _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id
-        GetNextStepText("check_lists_swap_", _main_nodes[head].label, _dynamic_nodes[dynamic_list].label, _main_nodes[targeted_node].label, _main_nodes[targeted_node_son].label);
-        return [ConfirmListsSwap, [version_num]];
+        highlighters.AddDynamicNode([dynamic_list], true);
+        GetNextStepText("get_leading_dynamic_node", _dynamic_nodes[dynamic_list].label);
+        return [CheckIfReachedHead1, [version_num]];
     }
 }
-async function ConfirmListsSwap([version_num]) {
+async function CheckIfReachedHead1([version_num]) {
     let version = _versions[version_num];
+
+    let dynamic_list = version.dynamic_list;
+    let targeted_node = _dynamic_nodes[dynamic_list].target_node;
+    highlighters.Clear(false);
+    highlighters.AddMainNode([targeted_node], true);
+    GetNextStepText("get_targeted_main_node", _dynamic_nodes[dynamic_list].label, _main_nodes[targeted_node].label);
+    return [CheckIfReachedHead2, [version_num]];
+}
+async function CheckIfReachedHead2([version_num]) {
+    let version = _versions[version_num];
+
+    let dynamic_list = version.dynamic_list;
+    let targeted_node = _dynamic_nodes[dynamic_list].target_node;
+    let targeted_node_son = _main_nodes[targeted_node].son_id
+    highlighters.Clear(false);
+    highlighters.AddMainNode([targeted_node_son], true);
+    GetNextStepText("get_targeted_node_son", _dynamic_nodes[dynamic_list].label, _main_nodes[targeted_node].label, _main_nodes[targeted_node_son].label);
+    return [ConfirmListsSwap, [version_num]];
+}
+
+async function ConfirmListsSwap([version_num]) {
+    highlighters.Clear();
+    let version = _versions[version_num];
+    let head = version.head
     if (version.dynamic_list !== null && _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id === version.head) {
         console.log('Dynamic and operational lists swapped.');
         version.operational_list = version.dynamic_list;
@@ -793,7 +1017,7 @@ async function ConfirmListsSwap([version_num]) {
         version.dynamic_list = null;
         version.dynamic_list_size = 0;
 
-        GetNextStepText("lists_swap_needed");
+        GetNextStepText("reached_head_swap_confirmed", _main_nodes[head].label);
         HighlightVersion(version_num);
         if (is_first_swap) {
             is_first_swap = false;
@@ -806,10 +1030,10 @@ async function ConfirmListsSwap([version_num]) {
     }
     if (is_first_swap) {
         is_first_swap = false;
-        GetNextStepText("swap_failure");
+        GetNextStepText("first_swap_failed", _main_nodes[head].label);
         return [TargetedNodeDefining, [version_num]];
     }
-    GetNextStepText("lists_swap_ok");
+    GetNextStepText("second_swap_failed", _main_nodes[head].label);
     if (is_push) {
         return [EndPushing, []];
     }
@@ -822,22 +1046,58 @@ async function FirstSwapSuccess() {
     }
     return [EndPopping, []];
 }
+
 async function TargetedNodeDefining([version_num]) {
-    let new_targeted_main_node;
     let version = _versions[version_num];
+    highlighters.Clear(false)
     if (version.dynamic_list !== null) {
         let dynamic_node = version.dynamic_list;
-        let targeted_node = _dynamic_nodes[version.dynamic_list].target_node;
-        new_targeted_main_node = _main_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id;
-        GetNextStepText("define_targeted_node_1", _dynamic_nodes[dynamic_node].label, _main_nodes[targeted_node].label, _main_nodes[new_targeted_main_node].label);
+        highlighters.AddDynamicNode([dynamic_node], true);
+        GetNextStepText("define_targeted_node_1", _dynamic_nodes[dynamic_node].label);
+        return [TargetedNodeDefining2, [version_num]];
     } else {
         let tail = version.tail;
-        new_targeted_main_node = _main_nodes[version.tail].son_id;
-        GetNextStepText("define_targeted_node_2", _main_nodes[tail].label, _main_nodes[new_targeted_main_node].label);
+        highlighters.AddMainNode([tail], true);
+        GetNextStepText("define_targeted_node_null", _main_nodes[tail].label);
+        return [TargetedNodeDefiningNull2, [version_num]];
     }
+
+}
+async function TargetedNodeDefining2([version_num]) {
+    let version = _versions[version_num];
+
+    let dynamic_node = version.dynamic_list;
+    let targeted_node = _dynamic_nodes[dynamic_node].target_node;
+    highlighters.Clear(false)
+    highlighters.AddMainNode([targeted_node], true);
+    GetNextStepText("define_targeted_node_2", _dynamic_nodes[dynamic_node].label, _main_nodes[targeted_node].label);
+
+    return [TargetedNodeDefining3, [version_num]];
+}
+async function TargetedNodeDefining3([version_num]) {
+    let version = _versions[version_num];
+
+    let dynamic_node = version.dynamic_list;
+    let targeted_node = _dynamic_nodes[dynamic_node].target_node;
+    let new_targeted_main_node = _main_nodes[targeted_node].son_id;
+    highlighters.Clear(false)
+    highlighters.AddMainNode([new_targeted_main_node], true);
+    GetNextStepText("define_targeted_node_3", _dynamic_nodes[dynamic_node].label, _main_nodes[targeted_node].label, _main_nodes[new_targeted_main_node].label);
+
+    return [NewDynamicNodeCreation, [version_num, new_targeted_main_node]];
+}
+async function TargetedNodeDefiningNull2([version_num]) {
+    let version = _versions[version_num];
+
+    let tail = version.tail;
+    let new_targeted_main_node = _main_nodes[version.tail].son_id;
+    highlighters.Clear(false)
+    highlighters.AddMainNode([new_targeted_main_node], true);
+    GetNextStepText("define_targeted_node_null2", _main_nodes[tail].label, _main_nodes[new_targeted_main_node].label);
     return [NewDynamicNodeCreation, [version_num, new_targeted_main_node]];
 
 }
+
 async function NewDynamicNodeCreation([version_num, targeted_main_node]) {
     let version = _versions[version_num];
 
@@ -870,12 +1130,16 @@ async function NewDynamicNodeCreation([version_num, targeted_main_node]) {
 
     await UpdateSecondaryLayout__NoPhysics();
     HighlightVersion(version_num);
+    highlighters.Clear(false);
+    highlighters.AddDynamicNode([_dynamic_nodes.length - 1]);
+    highlighters.AddDynamicLink([_dynamic_links.length - 1], true);
 
     return [TrySwappingListsAgain, [version_num]];
 }
 async function TrySwappingListsAgain([version_num]) {
+    highlighters.Clear();
     GetNextStepText("try_swap_again");
-    return [CheckListsSwap, [version_num]];
+    return [TrySwappingLists, [version_num]];
 }
 
 async function EndPushing() {
@@ -891,6 +1155,7 @@ async function PreparePop([parent_version_num]) {
 async function DefineNodeToPop([parent_version_num]) {
     let parent_version = _versions[parent_version_num];
     let head = parent_version.head;
+    highlighters.AddMainNode([head], true);
     GetNextStepText("define_node_to_pop", _main_nodes[head].label);
     ++overall_id;
     if (parent_version.size === 1) {
@@ -899,13 +1164,14 @@ async function DefineNodeToPop([parent_version_num]) {
     if (parent_version.size === 2) {
         return [QueueSizeIs2, []];
     }
-    return [QueueSizeNormal, [parent_version_num]];
+    return [DefineNewHead, [parent_version_num]];
 }
 async function QueueSizeIs1() {
     let version = _versions.at(-1);
     version.head = 0;
     version.tail = 0;
     version.size = 0;
+    highlighters.Clear();
     HighlightVersion(_versions.length - 1);
     GetNextStepText("pop_node_list_size_1");
     return [EndPopping, []];
@@ -914,19 +1180,42 @@ async function QueueSizeIs2() {
     let version = _versions.at(-1);
     version.head = version.tail;
     version.size = 1;
+    highlighters.Clear();
     HighlightVersion(_versions.length - 1);
     GetNextStepText("pop_node_list_size_2");
     return [EndPopping, []];
 }
-async function QueueSizeNormal([parent_version_num]) {
-    GetNextStepText("define_new_head_1");
-    return [DefineNewHead, [parent_version_num]];
-}
 async function DefineNewHead([parent_version_num]) {
     let parent_version = _versions[parent_version_num];
-    let operational_list = _dynamic_nodes[parent_version.operational_list].next_list;
-    let first_el = _dynamic_nodes[parent_version.operational_list].target_node;
-    GetNextStepText("define_new_head_2", _dynamic_nodes[operational_list].label, _main_nodes[first_el].label);
+
+    let operational_node = parent_version.operational_list;
+    highlighters.Clear(false);
+    highlighters.AddDynamicNode([operational_node], true);
+    GetNextStepText("define_new_head_1", _dynamic_nodes[operational_node].label);
+    return [DefineNewHead2, [parent_version_num]];
+}
+async function DefineNewHead2([parent_version_num]) {
+    let parent_version = _versions[parent_version_num];
+
+    let operational_node = parent_version.operational_list;
+    let next_operational_list = _dynamic_nodes[operational_node].next_list;
+
+    highlighters.Clear(false);
+    highlighters.AddDynamicNode([next_operational_list], true);
+    GetNextStepText("define_new_head_2", _dynamic_nodes[next_operational_list].label);
+    return [DefineNewHead3, [parent_version_num]];
+}
+async function DefineNewHead3([parent_version_num]) {
+    let parent_version = _versions[parent_version_num];
+
+    let operational_node = parent_version.operational_list;
+    let next_operational_list = _dynamic_nodes[operational_node].next_list;
+    let new_head = _dynamic_nodes[operational_node].target_node;
+
+    highlighters.Clear(false);
+    highlighters.AddMainNode([new_head], true);
+
+    GetNextStepText("define_new_head_3", _dynamic_nodes[next_operational_list].label, _main_nodes[new_head].label);
     return [ShowNewVersion, [parent_version_num]];
 }
 async function ShowNewVersion([parent_version_num]) {
@@ -937,8 +1226,11 @@ async function ShowNewVersion([parent_version_num]) {
     version.size = parent_version.size - 1;
     version.operational_list_size = parent_version.operational_list_size - 1;
     GetNextStepText("pop_node");
+    highlighters.Clear(false);
+    highlighters.AddMainNode([version.head]);
+    highlighters.AddDynamicNode([version.operational_list], true);
     HighlightVersion(_versions.length - 1);
-    return [DefineDynamicListSize, [_versions.length - 1]];
+    return [DynamicListProbableChange, [_versions.length - 1]];
 }
 async function EndPopping() {
     GetNextStepText("ended_popping");
@@ -1535,6 +1827,30 @@ async function UpdateSecondaryLayout__NoPhysics() {
     StopUpdatingSecondaryLayout();
 }
 
+async function UpdateLayout() {
+    is_updating_layout = true;
+    console.log(`Started updating layout`);
+    UpdateVersionsLayout();
+    UpdateMainLayout();
+    UpdateSecondaryLayout();
+    await sleep(simulation_time);
+    StopUpdatingLayout();
+    console.log(`Ended reshaping layout`);
+}
+function StopUpdatingLayout() {
+    if (is_updating_layout) {
+        main_sim.stop();
+        sec_sim.stop();
+        ver_sim.stop();
+        is_updating_layout = false;
+    }
+}
+async function UpdateLayout__NoPhysics() {
+    await UpdateVersionsLayout__NoPhysics();
+    await UpdateMainLayout__NoPhysics();
+    await UpdateSecondaryLayout__NoPhysics();
+}
+
 async function Setup() {
     BindLocaleSwitcher();
     BindStepByStepToggler();
@@ -1572,31 +1888,12 @@ function BindStepByStepToggler() {
     };
 }
 
-async function UpdateLayout() {
-    is_updating_layout = true;
-    console.log(`Started updating layout`);
-    UpdateVersionsLayout();
-    UpdateMainLayout();
-    UpdateSecondaryLayout();
-    await sleep(simulation_time);
-    StopUpdatingLayout();
-    console.log(`Ended reshaping layout`);
-}
-function StopUpdatingLayout() {
-    if (is_updating_layout) {
-        main_sim.stop();
-        sec_sim.stop();
-        ver_sim.stop();
-        is_updating_layout = false;
+function ChangeClassWithRetain(object, ind, selection, save, change_to) {
+    if (selection[ind].classList.contains(save)) {
+        change_to += ' ' + save;
     }
+    return change_to;
 }
-async function UpdateLayout__NoPhysics() {
-    await UpdateVersionsLayout__NoPhysics();
-    await UpdateMainLayout__NoPhysics();
-    await UpdateSecondaryLayout__NoPhysics();
-}
-
-
 function HighlightVersion(version_num) {
     if (chosen_version === version_num) {
         ver_svg.select('g.nodes').select("[id='" + version_num + "']").dispatch('click');
@@ -1609,24 +1906,31 @@ function VersionClick(event, object) {
     console.log(`Version ${object.id} was clicked.`);
     let version = _versions[object.id];
 
-
     if (chosen_version === version.id) { // Version is same, return graph to default
         main_svg.select('g.nodes')
             .selectAll('circle')
-            .attr('class', 'regular_node');
+            .attr('class', (object, ind, selection) => {
+                return ChangeClassWithRetain(object, ind, selection, 'blink_node', 'regular_node')
+            });
         main_svg.select('g.links')
             .selectAll('line')
-            .attr('class', 'arrow_link');
+            .attr('class', (object, ind, selection) => {
+                return ChangeClassWithRetain(object, ind, selection, 'blink_link', 'arrow_link')
+            });
         main_svg.select('g.texts')
             .selectAll('text')
             .attr('class', 'graph_text');
 
         sec_svg.select('g.nodes')
             .selectAll('circle')
-            .attr('class', 'regular_node');
+            .attr('class', (object, ind, selection) => {
+                return ChangeClassWithRetain(object, ind, selection, 'blink_node', 'regular_node')
+            });
         sec_svg.select('g.links')
             .selectAll('line')
-            .attr('class', 'arrow_link');
+            .attr('class', (object, ind, selection) => {
+                return ChangeClassWithRetain(object, ind, selection, 'blink_link', 'arrow_link')
+            });
         sec_svg.select('g.texts')
             .selectAll('text')
             .attr('class', 'graph_text');
@@ -1637,22 +1941,30 @@ function VersionClick(event, object) {
 
 
     chosen_version = version.id;    // New version clicked, make all graph faint
-    main_svg.select('g.links')
-        .selectAll('line')
-        .attr('class', 'faint_arrow_link');
     main_svg.select('g.nodes')
         .selectAll('circle')
-        .attr('class', 'faint_node');
+        .attr('class', (object, ind, selection) => {
+            return ChangeClassWithRetain(object, ind, selection, 'blink_node', 'faint_node')
+        });
+    main_svg.select('g.links')
+        .selectAll('line')
+        .attr('class', (object, ind, selection) => {
+            return ChangeClassWithRetain(object, ind, selection, 'blink_link', 'faint_arrow_link')
+        });
     main_svg.select('g.texts')
         .selectAll('text')
         .attr('class', 'faint_text');
 
-    sec_svg.select('g.links')
-        .selectAll('line')
-        .attr('class', 'faint_arrow_link');
     sec_svg.select('g.nodes')
         .selectAll('circle')
-        .attr('class', 'faint_node');
+        .attr('class', (object, ind, selection) => {
+            return ChangeClassWithRetain(object, ind, selection, 'blink_node', 'faint_node')
+        });
+    sec_svg.select('g.links')
+        .selectAll('line')
+        .attr('class', (object, ind, selection) => {
+            return ChangeClassWithRetain(object, ind, selection, 'blink_link', 'faint_arrow_link')
+        });
     sec_svg.select('g.texts')
         .selectAll('text')
         .attr('class', 'faint_text');
@@ -1660,7 +1972,9 @@ function VersionClick(event, object) {
     if (version.tail === 0) {
         main_svg.select('g.nodes')   // Null version, show null node only
             .select("[id='0']")
-            .attr('class', 'null_node');
+            .attr('class', (object, ind, selection) => {
+                return ChangeClassWithRetain(object, ind, selection, 'blink_node', 'null_node')
+            });
         main_svg.select('g.texts')
             .select("[id='0']")
             .attr('class', 'graph_text');
@@ -1674,9 +1988,13 @@ function VersionClick(event, object) {
     let curr_text = main_svg.select('g.texts')
         .select("[id='" + version.tail + "']");
     while (Number(curr_node.attr('id')) >= version.head) {
-        curr_node.attr('class', 'mid_node');
+        curr_node.attr('class', (object, ind, selection) => {
+            return ChangeClassWithRetain(object, ind, selection, 'blink_node', 'mid_node')
+        });
         if (Number(curr_node.attr('id')) > version.head) {
-            curr_link.attr('class', 'arrow_link');
+            curr_link.attr('class', (object, ind, selection) => {
+                return ChangeClassWithRetain(object, ind, selection, 'blink_link', 'arrow_link')
+            });
         }
         curr_text.attr('class', 'graph_text');
         curr_link = main_svg.select('g.links')
@@ -1695,9 +2013,13 @@ function VersionClick(event, object) {
         curr_text = sec_svg.select('g.texts')
             .select("[id='" + version.operational_list + "']");
         while (Number(curr_node.attr('id')) > 0) {
-            curr_node.attr('class', 'operational_node');
+            curr_node.attr('class', (object, ind, selection) => {
+                return ChangeClassWithRetain(object, ind, selection, 'blink_node', 'operational_node')
+            });
             if (_dynamic_links[curr_link.attr('id')].target.id !== 0) {
-                curr_link.attr('class', 'arrow_link');
+                curr_link.attr('class', (object, ind, selection) => {
+                    return ChangeClassWithRetain(object, ind, selection, 'blink_link', 'arrow_link')
+                });
             }
             curr_text.attr('class', 'graph_text');
             curr_link = sec_svg.select('g.links')
@@ -1718,9 +2040,13 @@ function VersionClick(event, object) {
         curr_text = sec_svg.select('g.texts')
             .select("[id='" + version.dynamic_list + "']");
         while (Number(curr_node.attr('id')) > 0) {
-            curr_node.attr('class', 'dynamic_node');
+            curr_node.attr('class', (object, ind, selection) => {
+                return ChangeClassWithRetain(object, ind, selection, 'blink_node', 'dynamic_node')
+            });
             if (_dynamic_links[curr_link.attr('id')].target.id !== 0) {
-                curr_link.attr('class', 'arrow_link');
+                curr_link.attr('class', (object, ind, selection) => {
+                    return ChangeClassWithRetain(object, ind, selection, 'blink_link', 'arrow_link')
+                });
             }
             curr_text.attr('class', 'graph_text');
             curr_link = sec_svg.select('g.links')
@@ -1735,7 +2061,9 @@ function VersionClick(event, object) {
     if (version.operational_list === null || version.dynamic_list === null) {
         sec_svg.select('g.nodes')   // Null version, show null node only
             .select("[id='0']")
-            .attr('class', 'null_node');
+            .attr('class', (object, ind, selection) => {
+                return ChangeClassWithRetain(object, ind, selection, 'blink_node', 'null_node')
+            });
         sec_svg.select('g.texts')
             .select("[id='0']")
             .attr('class', 'graph_text');
@@ -1744,10 +2072,14 @@ function VersionClick(event, object) {
 
     main_svg.select('g.nodes')       // Draw head and tail nodes
         .select("[id='" + version.head + "']")
-        .attr('class', 'head_node');
+        .attr('class', (object, ind, selection) => {
+            return ChangeClassWithRetain(object, ind, selection, 'blink_node', 'head_node')
+        });
     main_svg.select('g.nodes')
         .select("[id='" + version.tail + "']")
-        .attr('class', 'tail_node');
+        .attr('class', (object, ind, selection) => {
+            return ChangeClassWithRetain(object, ind, selection, 'blink_node', 'tail_node')
+        });
 }
 
 function PopupMouseOverVersionNode(event, object) {
@@ -1816,32 +2148,6 @@ function PopupMouseOutDynamicNode() {
     popup.classList.remove('show_popup');
 }
 
-function NodesHighlightingOn(main_nodes_id, dynamic_nodes_id) {
-    console.log('Highlighting on:', main_nodes_id, dynamic_nodes_id);
-    let main = main_svg.select('g.nodes');
-    for (let node of main_nodes_id) {
-        let target = main.select("[id='" + node + "']").node();
-        target.classList.add('blink_node');
-    }
-    let dynamic = sec_svg.select('g.nodes');
-    for (let node of dynamic_nodes_id) {
-        let target = dynamic.select("[id='" + node + "']").node();
-        target.classList.add('blink_node');
-    }
-}
-function NodesHighlightingOff(main_nodes_id, dynamic_nodes_id) {
-    console.log('Highlighting off:', main_nodes_id, dynamic_nodes_id);
-    let main = main_svg.select('g.nodes');
-    for (let node of main_nodes_id) {
-        let target = main.select("[id='" + node + "']").node();
-        target.classList.remove('blink_node');
-    }
-    let dynamic = sec_svg.select('g.nodes');
-    for (let node of dynamic_nodes_id) {
-        let target = dynamic.select("[id='" + node + "']").node();
-        target.classList.remove('blink_node');
-    }
-}
 
 function GetNextStepText() {
     let option = arguments[0];
