@@ -1,7 +1,7 @@
 //TODO
 // Поправить сохранение каждого состояния, кажется сейчас это не так эффективно
-//
-//
+//TODO
+// Если после попытки свопнуть списки мы не смогли этого сделать - полученную вершину можно запомнить и сразу использовать ее для создания динамической
 
 let _nodes = [];
 let _links = [];
@@ -40,6 +40,8 @@ let is_push = true;
 let highlighters;
 
 let chosen_version = -1;
+
+let instruction_is_open = false;
 
 
 let locales = ['en', 'ru'];
@@ -1905,7 +1907,7 @@ function PopupMouseOverVersionNode(event, object) {
     let popup = document.getElementById('version_node_popup');
     let a = document.querySelector(`#versions_svg #ver_nodes [id='${object.id}']`).getBoundingClientRect();
     let x_coord = a.left;
-    let y_coord = a.bottom + 18;
+    let y_coord = a.bottom + window.scrollY + 18;
     popup.style.left = x_coord + 'px';
     popup.style.top = y_coord + 'px';
     let head = _nodes[object.head].label;
@@ -1928,7 +1930,7 @@ function PopupMouseOverMainNode(event, object) {
     let popup = document.getElementById('main_node_popup');
     let a = document.querySelector(`#main_svg #main_nodes [id='${object.id}']`).getBoundingClientRect();
     let x_coord = a.left;
-    let y_coord = a.bottom + 10;
+    let y_coord = a.bottom + window.scrollY + 10;
     popup.style.left = x_coord + 'px';
     popup.style.top = y_coord + 'px';
     let son_id = object.son_id !== null ? _nodes[object.son_id].label : 'Null';
@@ -1945,7 +1947,7 @@ function PopupMouseOverDynamicNode(event, object) {
     let popup = document.getElementById('dynamic_node_popup');
     let a = document.querySelector(`#secondary_svg #sec_nodes [id='${object.id}']`).getBoundingClientRect();
     let x_coord = a.left;
-    let y_coord = a.bottom + 10;
+    let y_coord = a.bottom + window.scrollY + 10;
     popup.style.left = x_coord + 'px';
     popup.style.top = y_coord + 'px';
     let son = object.next_list !== null ? _dynamic_nodes[object.next_list].label : 'Null';
@@ -1985,4 +1987,29 @@ function CloseSideBar() {
     let sidebar = document.getElementById('side_bar');
     sidebar.classList.remove('open_sidebar');
     sidebar.classList.add('close_sidebar');
+}
+
+function InstructionToggler() {
+    if (instruction_is_open) {
+        HideInstruction();
+    } else {
+        ShowInstruction();
+    }
+    instruction_is_open = !instruction_is_open;
+}
+function ShowInstruction() {
+    let overlay = document.getElementById('overlay');
+    overlay.classList.remove('overlay_off');
+    overlay.classList.add('overlay_on');
+    let instruction = document.getElementById('instruction_text');
+    instruction.classList.remove('close_instruction');
+    instruction.classList.add('open_instruction');
+}
+function HideInstruction() {
+    let overlay = document.getElementById('overlay');
+    overlay.classList.remove('overlay_on');
+    overlay.classList.add('overlay_off');
+    let instruction = document.getElementById('instruction_text');
+    instruction.classList.remove('open_instruction');
+    instruction.classList.add('close_instruction');
 }

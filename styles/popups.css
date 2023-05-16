@@ -1,4 +1,6 @@
 .popup {
+    position: absolute;
+    top: 0;
     visibility: hidden;
     display: flex;
     flex-direction: column;
@@ -8,7 +10,6 @@
     color: white;
     padding: 5px;
     border-radius: 6px;
-    position: absolute;
 }
 
 .show_popup {

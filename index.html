@@ -20,9 +20,11 @@
             </select>
         </div>
 
-        <button id="debug_button" onclick="Debug()">Debug</button>
+        <button id="debug_button" class="menu_button" onclick="Debug();CloseSideBar();">Debug</button>
 
-        <button id="update_layout_button" onclick="UpdateLayout()">Update Layout</button>
+        <button id="update_layout_button" class="menu_button" onclick="UpdateLayout();CloseSideBar();">Update Layout</button>
+
+        <button id="instruction_button" class="menu_button" onclick="InstructionToggler();CloseSideBar();">Instruction</button>
     </div>
 
     <div class="container_flex">
@@ -48,29 +50,48 @@
 
 
     <form id="push_form" class="push_form" onsubmit="return false">
-        <label id="push_version_label" for="push_version"> Push new element to specific version: </label>
+        <label id="push_version_label" for="push_version">Push new element to specific version:</label>
         <input type="text" id="push_version" class="push_version" name="push_version" size="3">
-        <button id="push_button" class="push_button" onclick="Push()"> Push </button>
+        <button id="push_button" class="ordinary_button" onclick="Push()">Push</button>
     </form>
 
     <form id="pop_form" class="pop_form" onsubmit="return false">
-        <label id="pop_version_label" for="pop_version"> Pop last element from specific version: </label>
+        <label id="pop_version_label" for="pop_version">Pop last element from specific version:</label>
         <input type="text" id="pop_version" class="pop_version" name="pop_version" size="3">
-        <button id="pop_button" class="pop_button" onclick="Pop()"> Pop </button>
+        <button id="pop_button" class="ordinary_button" onclick="Pop()">Pop</button>
     </form>
 
     <div id="step_by_step_container" class="step_by_step_container">
         <input type="checkbox" id="step_by_step_toggle_checkbox" class="step_by_step_toggle_checkbox" name="step_by_step_toggle_checkbox">
-        <label id="step_by_step_toggle_checkbox_label" for="step_by_step_toggle_checkbox"> Activate Step-by-Step </label>
+        <label id="step_by_step_toggle_checkbox_label" for="step_by_step_toggle_checkbox">Activate Step-by-Step</label>
     </div>
 
-    <button id="previous_step_button" onclick="PreviousStep()" hidden="hidden"> Previous step </button>
+    <button id="previous_step_button" onclick="PreviousStep()" hidden="hidden">Previous step</button>
 
-    <button id="next_step_button" onclick="NextStep()" hidden="hidden"> Next step </button>
+    <button id="next_step_button" onclick="NextStep()" hidden="hidden">Next step</button>
 
-<script>
-    Setup();
-</script>
+    <div id="instruction_block">
+        <div id="overlay" class="overlay" onclick="InstructionToggler()"></div>
+        <div id="instruction_text" class="instruction_text">
+            <p>Данный визуализатор представляет собой один из вариантов реализации структуры данных "Персистентная очередь". Основная концепция алгоритма - построение на двух деревьях. Одно из них представляет саму очередь, второе является вспомогательным для совершения различных операций над ней.</p>
+            <p>Инструкция по интерфейсу</p>
+            <p>Перед началом работы настоятельно советуется прочитать техническое описание алгоритма, для понимания его составных частей.</p>
+            <h2>1. Меню</h2>
+            <p>Здесь можно изменить язык, просмотреть различные конфигурации и тд.</p>
+            <h4>1.1 Перестроить граф</h4>
+            <p>Если в процессе работы граф потерял структурированность (вершины перекрывают друг друга, надписи смешиваются), то эта опция повторно запустит перестройку графа.</p>
+            <h2>2. Основной интерфейс</h2>
+            <p>2.1 В верхней части расположена строка с объектами Версий. При нажатии на Версию будут выделены соответствующая ей очередь, а также ее вспомогательные списки.</p>
+            <p>2.2 В левой части расположен основной граф - сама очередь.</p>
+            <p>2.3 Справа расположено дерево вспомогательныых списков.</p>
+            <p>2.4 Чтобы добавить или удалить вершину из определенной версии очереди, введите номер искомой версии в соответствующее поле и нажмите кнопку.</p>
+            <p>2.5 Если вы хотите, чтобы весь процесс добавления/удаления происходил пошагово и наглядно - отметьте поле Пошаговая визуализация.</p>
+        </div>
+    </div>
+
+    <script>
+        Setup();
+    </script>
 
 
     <div id="version_node_popup" class="popup">
