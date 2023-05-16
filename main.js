@@ -1,11 +1,7 @@
 //TODO
 // Поправить сохранение каждого состояния, кажется сейчас это не так эффективно
-//TODO
-// Визуально доработать таблички с поинтерами для версий, чтобы они были отцентрированы по вертикали
 //
-//todo
-// Поправить и дополнить русский перевод
-
+//
 
 let _nodes = [];
 let _links = [];
@@ -55,10 +51,10 @@ let text_container_en = new Map([
 
     ['copy_old_version',
         'We start from copying all old version parameters into new one, so we can change it.\n' +
-        'All further changes will be applied to the new version.'],
+        'All further calculations and changes will be applied to the new version.'],
 
     ['define_tail_node_to_link',
-        'We want to link our new node to the tail of new version in main tree.\n' +
+        'We want to link our new node to the tail of new version in main tree, so we need to define it.\n' +
         'It\'s node {1}, which we can get from version pointers.'],
 
     ['push_new_node',
@@ -151,11 +147,11 @@ let text_container_en = new Map([
 
     ['add_new_dynamic_node_1',
         'This way, we created new dynamic node.\n' +
-        'Let\'s link it to the previous leading one.'],
+        'Let\'s link it to the currently leading one.'],
 
     ['add_new_dynamic_node_2',
         'This way, we created new dynamic node.\n' +
-        'Because there wasn\'t a dynamic list for previous version, dynamic node\'s son points to NULL.\n' +
+        'Because there wasn\'t a dynamic list for current version, dynamic node\'s son points to NULL.\n' +
         'Let\'s add it to the tree.'],
 
     ['try_swap_again',
@@ -190,10 +186,10 @@ let text_container_en = new Map([
     ['define_new_head_3',
         'This operational node has two important parameters:\n' +
         '1) next operational node (it\'s son) - node {1}.\n' +
-        '2) targeted main queue node - node {2} in main tree.'],
+        '2) targeted node - node {2} in main tree.'],
 
     ['pop_node',
-        'So now we know, how to create new version.\n' +
+        'So now we know, how to pop the head node from current version.\n' +
         'We simply change new version\'s head-pointer and operational list pointer to this nodes.'],
 
     ['ended_popping',
@@ -201,86 +197,129 @@ let text_container_en = new Map([
 ]);
 let text_container_ru = new Map([
     ['click_on_old_version_push',
-        'Мы хотим добавить новую вершину к версии {1}.'],
+        'Мы хотим добавить новую вершину к версии {1}.\n' +
+        'Подсветим ее.'],
+
+    ['copy_old_version',
+        'Начнем с того, что создадим новую версию, в которую скопируем все параметры от старой.\n' +
+        'Все дальнейшие расчеты и изменения производятся и применяются к новой версии.'],
+
+    ['define_tail_node_to_link',
+        'Мы хотим привязать новую вершину к хвостовой вершине текущей версии, поэтому нам необходимо ее определить.\n' +
+        'Это вершина {1}, которую мы можем получить из указателей версии.'],
 
     ['push_new_node',
-        'Нам достаточно скопировать в новую версию всю информацию от старой и привязать новую вершину {1} к \'хвосту\' этой версии в главном графе.\n' +
-        'Теперь у новой версии изменился \'хвост\'.'],
+        'Теперь мы можем привязать новую вершину {1} к \'хвосту\' этой версии в главном графе.\n' +
+        'Также изменим указатель на \'хвост\' у версии.'],
 
     ['dynamic_list_probable_change',
-        'Мы сравниваем новое количество неотслеживаемых вершин (выделены черным цветом) с размером соответствующего операционного списка (выделен голубым цветом).'],
+        'Возможно, нам необходимо изменить и дополнительные списки.\n' +
+        'Для этого мы сравниваем новое количество неотслеживаемых вершин (выделены черным цветом) с размером соответствующего операционного списка (выделен голубым цветом).'],
 
     ['list_size_nothing_changes',
-        'Размер операционного списка - {1}, что больше или равно 1/2 от количества неотслеживаемых вершин.\n' +
+        'Размер операционного списка - {1}, а неотслеживаемых вершин - {2}.\n' +
+        'То есть, список больше или равен 1/2 количества неотслеживаемых вершин.\n' +
         'Нет необходимости в изменениях.'],
 
     ['list_size_needs_changes',
-        'Размер операционного списка - {1}, что меньше чем 1/2 от количества неотслеживаемых вершин.\n' +
-        'Проверим, можно ли поменять местами операционный и динамический списки (в случае, если предыдущее удаление вершины дало нам такое возможность).'],
+        'Размер операционного списка - {1}, а неотслеживаемых вершин - {2}.\n' +
+        'То есть, список меньше, чем 1/2 количества неотслеживаемых вершин.\n' +
+        'Проверим, можно ли поменять местами операционный и динамический списки.'],
 
     ['swap_success',
         'Мы успешно поменяли списки местами, теперь динамический список пуст.\n' +
         'Больше ничего менять не нужно.'],
 
     ['first_swap_failed',
-        'Мы не смогли поменять местами списки, поэтому необходимо создать новую вершину для динамического листа.'],
+        '\'Голова\' этой версии - вершина {1}, она не сопадает с полученной нами ранее вершиной.\n' +
+        'Мы не можем поменять списки местами, поэтому необходимо создать новую вершину для динамического списка.'],
 
     ['dynamic_list_is_null',
         'Проверим, достиг ли динамический список \'головы\' текущей версии.\n' +
         'В нашем случае, динамический список отсутствует.'],
 
-    ['check_lists_swap',
-        'Проверим, достиг ли динамический список \'головы\' текущей версии.\n' +
-        'В нашем случае \'голова\' текущей версии - вершина {1}.\n' +
-        'Проведём следующие операции:\n' +
-        '1) Получим ведущую вершину динамического списка - это вершина {2}.\n' +
-        '2) Из нее узнаем, на какую вершину она указывает в главном графе - это вершина {3}.\n' +
-        '3) Осталось только получить сына этой вершины - вершину {4}'],
+    ['get_leading_dynamic_node',
+        'Чтобы поменять списки местами, необходимо проверить достиг ли динамический список \'головы\' текущей версии.\n' +
+        'Для этого проведем следующие операции:\n' +
+        '1) Получим ведущую вершину динамического списка - это вершина {1}.'],
+
+    ['get_targeted_main_node',
+        'Чтобы поменять списки местами, необходимо проверить достиг ли динамический список \'головы\' текущей версии.\n' +
+        'Для этого проведем следующие операции:\n' +
+        '1) Получим ведущую вершину динамического списка - это вершина {1}.\n' +
+        '2) Из нее узнаем, на какую вершину она указывает в главном графе - это вершина {2}.'],
+
+    ['get_targeted_node_son',
+        'Чтобы поменять списки местами, необходимо проверить достиг ли динамический список \'головы\' текущей версии.\n' +
+        'Для этого проведем следующие операции:\n' +
+        '1) Получим ведущую вершину динамического списка - это вершина {1}.\n' +
+        '2) Из нее узнаем, на какую вершину она указывает в главном графе - это вершина {2}.\n' +
+        '3) И находим сына этой вершины - вершину {3}.'],
 
     ['second_swap_failed',
-        'Динамический список не достиг \'головы\' текущей версии, ничего не происходит.'],
+        '\'Голова\' текущей версии - вершина {1}, которая не совпадает с полученной нами ранее.\n' +
+        'Значит, динамический список не достиг \'головы\' текущей версии, ничего не изменяется.'],
 
     ['reached_head_swap_confirmed',
-        'Мы получили одинаковые вершины, это значит что динамический список достиг \'головы\' текущей версии.\n' +
+        '\'Голова\' текущей версии - вершина {1}, которая совпадает с полученной нами ранее.' +
+        'Это означает, что динамический список достиг \'головы\' текущей версии.\n' +
         'Поэтому, теперь мы принимаем динамический список за операционный (меняем их местами).'],
 
     ['define_targeted_node_1',
-        'Чтобы это сделать, нам необходимо определить целевую вершину в главном графе и сына в динамическом списке.\n' +
-        'Вторую мы уже знаем, так как сейчас ведущая вершина динамического списка - {1}.\n' +
-        'Для нахождения первой нам необходимо выполнить следующие операции:\n' +
-        '1) Получить ведущую вершину динамического списка - это вершина {1}.\n' +
-        '2) Узнать из нее целевую вершину в главном графе - это вершина {2}.\n' +
-        '3) Из этой вершины получить ее сына - вершину {3}.\n' +
-        'Теперь, мы знаем необходимую целевую вершину для создания новой динамической вершины.'],
+        'Чтобы это сделать, нам необходимо определить целевую вершину в главном графе.\n' +
+        'Для этого мы выполняем следующие операции:\n' +
+        '1) Получаем ведущую вершину динамического списка - это вершина {1}.'],
 
     ['define_targeted_node_2',
-        'Чтобы это сделать, нам необходимо определить целевую вершину в главном графе и сына в динамическом списке.\n' +
-        'Первую вершину мы можем найти, просто взяв сына \'хвоста\' текущей версии:\n' +
+        'Чтобы это сделать, нам необходимо определить целевую вершину в главном графе.\n' +
+        'Для этого мы выполняем следующие операции:\n' +
+        '1) Получаем ведущую вершину динамического списка - это вершина {1}.\n' +
+        '2) Узнаем из нее целевую вершину в главном графе - это вершина {2}.'],
+
+    ['define_targeted_node_3',
+        'Чтобы это сделать, нам необходимо определить целевую вершину в главном графе.\n' +
+        'Для этого мы выполняем следующие операции:\n' +
+        '1) Получаем ведущую вершину динамического списка - это вершина {1}.\n' +
+        '2) Узнаем из нее целевую вершину в главном графе - это вершина {2}.\n' +
+        '3) Из этой вершины получаем ее сына - вершину {3}.\n' +
+        'Теперь, мы знаем необходимую целевую вершину для создания новой динамической вершины.'],
+
+    ['define_targeted_node_null',
+        'Чтобы это сделать, нам необходимо определить целевую вершину в главном графе.\n' +
+        'Для этого достаточно просто найти сына \'хвоста\' текущей версии:\n' +
+        '1) Текущий \'хвост\' - вершина {1}.'],
+
+    ['define_targeted_node_null2',
+        'Чтобы это сделать, нам необходимо определить целевую вершину в главном графе.\n' +
+        'Для этого достаточно просто найти сына \'хвоста\' текущей версии:\n' +
         '1) Текущий \'хвост\' - вершина {1}.\n' +
         '2) Ее сын - вершина {2}.\n' +
-        'Теперь, мы знаем необходимую целевую вершину.\n' +
-        'Так как у нас нет динамического списка для текущей вершины, положим сына новой динамической вершины равным NULL.'],
+        'Теперь, мы знаем необходимую целевую вершину для создания новой динамической вершины.'],
 
-    ['add_new_dynamic_node',
-        'Таким образом, мы создали новую ведущую динамическую вершину.\n' +
-        'Добавим ее в граф.'],
+    ['add_new_dynamic_node_1',
+        'Таким образом, мы создали новую динамическую вершину.\n' +
+        'Привяжем ее к текущей ведущей динамической вершине.'],
+
+    ['add_new_dynamic_node_2',
+        'Таким образом, мы создали новую динамическую вершину.\n' +
+        'Так как у текущей версии не было динамического списка, привяжем ее к указателю на NULL.\n'],
 
     ['try_swap_again',
-        'Снова попробуем поменять местами динамический и операционный списки местами.'],
+        'Так как мы создали новую динамическую вершину, попробуем снова поменять местами динамический и операционный списки местами.'],
 
     ['ended_pushing',
         'Мы успешно добавили вершину к выбранной версии!'],
 
     ['click_on_old_version_pop',
         'Мы хотим удалить вершину из версии {1}.\n' +
-        'Рассмотрим ее.'],
+        'Подсветим ее.'],
 
     ['define_node_to_pop',
         '\'Голова\' текущей версии - вершина {1}, поэтому мы хотим удалить именно ее.'],
 
     ['pop_node_list_size_1',
-        'В нашей очереди только 1 вершина, поэтому достаточно обнулить указатели на \'голову\' и \'хвост\' новой версии на NULL.\n' +
-        'Проще говоря, новая версия теперь эквивалентна стартовой версии N.'],
+        'В нашей очереди только 1 вершина, поэтому достаточно обнулить указатели на \'голову\' и \'хвост\' текущей версии на NULL.\n' +
+        'Проще говоря, теперь эта версия эквивалентна стартовой версии N.'],
 
     ['pop_node_list_size_2',
         'В нашей очереди есть только 2 вершины, поэтому достаточно в указатель на \'голову\' записать текущий указатель на \'хвост\'.'],
@@ -288,23 +327,20 @@ let text_container_ru = new Map([
     ['define_new_head_1',
         'Мы хотим определить, какая вершина станет следующей \'головой\'.\n' +
         'Так как у нас больше 2 вершин в очереди, мы не сможем это сделать напрямую.\n' +
-        'Поэтому, мы обратимся к операционномы списку текущей версии.\n' +
-        'Ведущая вершина этого списка - вершина {1}.'],
+        'Поэтому, мы обратимся к ведущей вершине операционного списка - вершине {1}.'],
 
     ['define_new_head_2',
-        'В свою очередь, эта операционная вершина владее 2 важными параметрами:\n' +
-        '1) следующая операционная вершина (ее сын) - вершина {1},\n' +
-        '2) целевая вершина в главной очереди - вершина {2} в главном графе.\n' +
-        'Нам потребуются оба этих параметра.'],
+        'Эта операционная вершина владеет 2 важными параметрами:\n' +
+        '1) следующая операционная вершина (ее сын) - вершина {1}.'],
+
+    ['define_new_head_3',
+        'Эта операционная вершина владеет 2 важными параметрами:\n' +
+        '1) следующая операционная вершина (ее сын) - вершина {1}.\n' +
+        '2) целевая вершина - вершина {2} в главном графе.'],
 
     ['pop_node',
-        'Таким образом, мы знаем как создать новую версию. Сначала, скопируем новую версию из текущей.\n' +
-        'Потом изменим голову новой версии на целевую вершину, которую мы узнали на предыдущем шаге.\n' +
-        'Также изменим ведущую вершину операционного списка на сына текущей ведущей вершины.'],
-
-    ['rebuild_dynamic_list',
-        'Единственное, что осталось сделать - проверить, не нужно ли изменить динамический список.\n' +
-        'Перестроим его, если это необходимо.'],
+        'Таким образом, мы знаем как удалить \'голову\' из текущей версии.\n' +
+        'Изменим указатели на голову и ведущую вершину операционного списка текущей версии на полученные ранее вершины.'],
 
     ['ended_popping',
         'Мы успешно удалили вершину из выбранной версии!'],
@@ -315,28 +351,52 @@ let text_containers = new Map([
 ]);
 
 let html_page_locale_en = new Map([
+    ['title', 'Persistent Queue'],
+
     ['locale_switcher_label', 'Select locale:'],
-    ['help_text', 'Here is some text.'],
+    ['update_layout_button', 'Update layout'],
     ['push_version_label', 'Push new element to specific version:'],
     ['push_button', 'Push'],
     ['pop_version_label', 'Pop last value from specific version:'],
     ['pop_button', 'Pop'],
-    ['debug_button', 'Debug'],
     ['step_by_step_toggle_checkbox_label', 'Activate step-by-step'],
-    ['update_layout_button', 'Update layout'],
+    ['previous_step_button', 'Previous step'],
     ['next_step_button', 'Next step'],
+
+    ['v_n_p_heading', 'Version pointers:'],
+    ['v_n_p_head_txt', 'Head:'],
+    ['v_n_p_tail_txt', 'Tail:'],
+    ['v_n_p_dynamic_txt', 'Dynamic:'],
+    ['v_n_p_operational_txt', 'Operational:'],
+    ['d_n_p_heading', 'Node pointers:'],
+    ['d_n_p_son_txt', 'Son:'],
+    ['d_n_p_target_txt', 'Target node:'],
+    ['m_n_p_heading', 'Node pointers:'],
+    ['m_n_p_son_txt', 'Son:'],
 ]);
 let html_page_locale_ru = new Map([
+    ['title', 'Персистентная очередь'],
+
     ['locale_switcher_label', 'Выберите язык:'],
-    ['help_text', 'Небольшой текст.'],
+    ['update_layout_button', 'Обновить граф'],
     ['push_version_label', 'Добавить новую вершину к версии:'],
     ['push_button', 'Добавить'],
     ['pop_version_label', 'Удалить последнюю вершину из версии:'],
     ['pop_button', 'Удалить'],
-    ['debug_button', 'Дебаг'],
     ['step_by_step_toggle_checkbox_label', 'Пошаговая визуализация'],
-    ['update_layout_button', 'Обновить граф'],
+    ['previous_step_button', 'Предыдущий шаг'],
     ['next_step_button', 'Следующий шаг'],
+
+    ['v_n_p_heading', 'Указатели версии:'],
+    ['v_n_p_head_txt', 'Голова:'],
+    ['v_n_p_tail_txt', 'Хвост:'],
+    ['v_n_p_dynamic_txt', 'Динамический:'],
+    ['v_n_p_operational_txt', 'Операционный:'],
+    ['d_n_p_heading', 'Указатели вершины:'],
+    ['d_n_p_son_txt', 'Сын:'],
+    ['d_n_p_target_txt', 'Целевая вершина:'],
+    ['m_n_p_heading', 'Указатели вершины:'],
+    ['m_n_p_son_txt', 'Сын:'],
 ]);
 let html_page_containers = new Map([
     ['en', html_page_locale_en],
@@ -1149,11 +1209,11 @@ function isNum(value) {
 function GetRandomInt(max_value) {
     return Math.floor(Math.random() * max_value);
 }
-function getTargetNodeCircumferencePoint(d) {
-    let t_radius = 12; // nodeWidth is just a custom attribute I calculate during the creation of the nodes depending on the node width
+function TargetNodeCircumferencePoint(d) {
+    let t_radius = 20; // custom number, for arrows on links be pointed exactly on node
     let dx = d.target.x - d.source.x;
     let dy = d.target.y - d.source.y;
-    let gamma = Math.atan2(dy, dx); // Math.atan2 returns the angle in the correct quadrant as opposed to Math.atan
+    let gamma = Math.atan2(dy, dx);
     let tx = d.target.x - (Math.cos(gamma) * t_radius);
     let ty = d.target.y - (Math.sin(gamma) * t_radius);
     return [tx, ty];
@@ -1366,27 +1426,6 @@ function SetupMainSVG() {
     d3.select('#main_svg')
         .call(main_zoom);
 
-    const markerBoxWidth = 10;
-    const markerBoxHeight = 10;
-    const refX = markerBoxWidth / 2;
-    const refY = markerBoxHeight / 2;
-    const markerWidth = markerBoxWidth / 2;
-    const markerHeight = markerBoxHeight / 2;
-    const arrowPoints = [[0, 0], [0, 8], [5, 4]];
-
-    main_svg
-        .append('defs')
-        .append('marker')
-        .attr('id', 'arrow')
-        .attr('viewBox', [0, 0, markerBoxWidth, markerBoxHeight])
-        .attr('refX', refX)
-        .attr('refY', refY)
-        .attr('markerWidth', markerWidth)
-        .attr('markerHeight', markerHeight)
-        .attr('orient', 'auto-start-reverse')
-        .append('path')
-        .attr('d', d3.line()(arrowPoints))
-        .attr('stroke', 'black');
 
     MakeMovableMain();
 
@@ -1408,10 +1447,10 @@ function MakeMovableMain() {
             .attr('x1', link => link.source.x)
             .attr('y1', link => link.source.y)
             .attr("x2", function (d) {
-                return getTargetNodeCircumferencePoint(d)[0];
+                return TargetNodeCircumferencePoint(d)[0];
             })
             .attr("y2", function (d) {
-                return getTargetNodeCircumferencePoint(d)[1];
+                return TargetNodeCircumferencePoint(d)[1];
             });
     });
 }
@@ -1536,10 +1575,10 @@ function MakeMovableSecondary() {
             .attr('x1', link => link.source.x)
             .attr('y1', link => link.source.y)
             .attr('x2', function (d) {
-                return getTargetNodeCircumferencePoint(d)[0];
+                return TargetNodeCircumferencePoint(d)[0];
             })
             .attr('y2', function (d) {
-                return getTargetNodeCircumferencePoint(d)[1];
+                return TargetNodeCircumferencePoint(d)[1];
             });
     });
 }
@@ -1654,7 +1693,12 @@ function SetLocale(new_locale) {
     }
     chosen_locale = new_locale;
     html_page_containers.get(chosen_locale).forEach((translation, id) => {
-        document.getElementById(id).innerText = translation;
+        let element = document.getElementById(id);
+        if (element !== null) {
+            element.innerText = translation;
+        } else if (id === 'title') {
+            document.title = translation;
+        }
     });
 }
 function BindStepByStepToggler() {
@@ -1933,8 +1977,12 @@ function GetNextStepText() {
 }
 
 function OpenSideBar() {
-    document.getElementById('side_bar').classList.add('open');
+    let sidebar = document.getElementById('side_bar');
+    sidebar.classList.remove('close_sidebar');
+    sidebar.classList.add('open_sidebar');
 }
 function CloseSideBar() {
-    document.getElementById('side_bar').classList.remove('open');
+    let sidebar = document.getElementById('side_bar');
+    sidebar.classList.remove('open_sidebar');
+    sidebar.classList.add('close_sidebar');
 }

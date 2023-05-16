@@ -1,0 +1,25 @@
+.arrow_link {
+    stroke-width: 3px;
+    stroke: rgba(50, 50, 50, 0.2);
+    marker-end: url(#arrow);
+}
+
+.faint_arrow_link {
+    stroke-width: 3px;
+    stroke: rgba(50, 50, 50, 0.2);
+    marker-end: url(#arrow);
+    opacity: 10%;
+}
+
+.blink_link {
+    animation: BlinkingLink 0.5s infinite alternate ease-in-out;
+}
+
+@keyframes BlinkingLink {
+    from {
+        opacity: 100;
+    }
+    to {
+        opacity: 0;
+    }
+}

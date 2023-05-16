@@ -1,0 +1,114 @@
+@import "sidebar.css";
+@import "popups.css";
+@import "nodes.css";
+@import "nodes_texts.css";
+@import "links.css";
+
+.container_flex {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+
+
+.side_bar_open_button {
+    display: flex;
+    flex-direction: column;
+    row-gap: 6px;
+
+    padding: 5px;
+    cursor: pointer;
+}
+.bar1, .bar2, .bar3 {
+    width: 35px;
+    height: 5px;
+    background-color: black;
+}
+
+
+
+.versions_container {
+    height: 58px;
+    border-radius: 10px;
+    margin-left: 10px;
+    overflow: scroll;
+    overflow-y: hidden;
+}
+.versions_svg {
+    width: 5000px;
+    height: 100%;
+    background: black;
+}
+
+
+
+.main_dynamic_container {
+    white-space: nowrap;
+    width: 100%;
+    height: 550px;
+    margin-top: 5px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.main_svg {
+    width: 60%;
+    height: 100%;
+    background: cyan;
+}
+.secondary_svg {
+    width: 40%;
+    height: 100%;
+    margin-left: 5px;
+    background: aquamarine;
+}
+
+
+
+.help_text {
+    white-space: pre-wrap;
+    border-width: 3px;
+    border-style: solid;
+    border-color: darkblue;
+}
+
+
+
+.push_form, .pop_form {
+    margin-top: 10px;
+}
+.push_version, .pop_version {
+    background-color: #eae9e9;
+    border: none;
+    border-bottom: 3px solid darkblue;
+    text-align: center;
+}
+.push_button, .pop_button {
+    background-color: lightgrey;
+    border: 4px solid gray;
+    border-radius: 4px;
+    color: black;
+    padding: 8px 16px;
+    text-align: center;
+    font-size: 16px;
+}
+
+
+
+.step_by_step_container {
+    margin-top: 10px;
+}
+.step_by_step_toggle_checkbox {
+    width: 25px;
+    height: 25px;
+}
+
+
+
+.banan {
+    visibility: hidden;
+    height: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    align-content: center;
+}
