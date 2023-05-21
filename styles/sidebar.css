@@ -17,7 +17,7 @@
 
 .open_sidebar {
     width: 20%;
-    border: 2px solid black;
+    border: 2px solid #8c8c8c;
     animation: OpenSidebar 0.5s ease-out;
 }
 
@@ -37,11 +37,11 @@
 @keyframes CloseSidebar {
     from {
         width: 20%;
-        border: 2px solid black;
+        border: 2px solid #8c8c8c;
     }
     to {
         width: 0;
-        border: 2px solid black;
+        border: 2px solid #8c8c8c;
     }
 }
 
@@ -64,10 +64,27 @@
 }
 
 .side_bar_text {
-    font-size: 30px;
-    color: #818181;
+    font-size: 25px;
+    font-weight: bold;
+    color: #8c8c8c;
 }
 
+.option_switcher {
+    width: fit-content;
+    max-width: 80%;
+    border: 4px solid #c2c2c2;
+    border-radius: 4px;
+    background: #e7e7e7;
+    font-size: 17px;
+    padding: 4px 4px;
+}
+.option_switcher:hover {
+    border: 4px solid #a4a4a4;
+    background: #c2c2c2;
+}
+.opt {
+    font-size: 17px;
+}
 
 .menu_button {
     background-color: #e7e7e7;
@@ -77,16 +94,18 @@
     padding: 8px 16px;
     text-align: center;
     font-size: 16px;
+    box-shadow: 0 3px #a4a4a4;
 }
 
 .menu_button:hover {
     background-color: #c2c2c2;
     border: 4px solid #a4a4a4;
+    box-shadow: 0 3px #8c8c8c;
 }
 
 .menu_button:active {
     background-color: #a4a4a4;
     border: 4px solid #8c8c8c;
-    border-top: 5px solid #8c8c8c;
-    border-bottom: 3px solid #8c8c8c;
+    box-shadow: none;
+    transform: translateY(3px);
 }

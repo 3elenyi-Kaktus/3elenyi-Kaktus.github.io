@@ -13,10 +13,22 @@
         <span class="close_button" onclick="CloseSideBar()">&times;</span>
 
         <div class="side_bar_container">
-            <label class="side_bar_text" id="locale_switcher_label" for="locale_switcher">Select locale:</label>
-            <select id="locale_switcher" name="locale_switcher">
-                <option value="en" selected>English</option>
-                <option value="ru">Русский</option>
+            <label id="locale_switcher_label" class="side_bar_text" for="locale_switcher">Select locale:</label>
+            <select id="locale_switcher" class="option_switcher" name="locale_switcher" autocomplete="off">
+                <option value="en" class="opt" selected>English</option>
+                <option value="ru" class="opt">Русский</option>
+            </select>
+        </div>
+
+        <div class="side_bar_container" style="display: none">
+            <label id="configuration_switcher_label" class="side_bar_text" for="configuration_switcher">Select configuration:</label>
+            <select id="configuration_switcher" class="option_switcher" name="configuration_switcher" autocomplete="off">
+                <option value="1" class="opt" selected>None</option>
+                <option value="2" class="opt">Pop from 1-element queue</option>
+                <option value="3" class="opt">Pop from 2-element queue</option>
+                <option value="4" class="opt">Pop from ordinary queue</option>
+                <option value="5" class="opt">Dynamic list creation</option>
+                <option value="6" class="opt">Auxiliary lists swap</option>
             </select>
         </div>
 
@@ -46,46 +58,78 @@
             <svg id="main_svg" class="main_svg"></svg><!--
          --><svg id="secondary_svg" class="secondary_svg"></svg>
     </div>
-    <p id="help_text" class="help_text" hidden="hidden"></p>
 
 
     <form id="push_form" class="push_form" onsubmit="return false">
-        <label id="push_version_label" for="push_version">Push new element to specific version:</label>
+        <label id="push_version_label" for="push_version" style="font-size: 17px">Push new element to specific version:</label>
         <input type="text" id="push_version" class="push_version" name="push_version" size="3">
         <button id="push_button" class="ordinary_button" onclick="Push()">Push</button>
     </form>
 
     <form id="pop_form" class="pop_form" onsubmit="return false">
-        <label id="pop_version_label" for="pop_version">Pop last element from specific version:</label>
+        <label id="pop_version_label" for="pop_version" style="font-size: 17px">Pop last element from specific version:</label>
         <input type="text" id="pop_version" class="pop_version" name="pop_version" size="3">
         <button id="pop_button" class="ordinary_button" onclick="Pop()">Pop</button>
     </form>
 
     <div id="step_by_step_container" class="step_by_step_container">
-        <input type="checkbox" id="step_by_step_toggle_checkbox" class="step_by_step_toggle_checkbox" name="step_by_step_toggle_checkbox">
-        <label id="step_by_step_toggle_checkbox_label" for="step_by_step_toggle_checkbox">Activate Step-by-Step</label>
+        <input type="checkbox" id="step_by_step_toggle_checkbox" class="step_by_step_toggle_checkbox" name="step_by_step_toggle_checkbox" autocomplete="off">
+        <label id="step_by_step_toggle_checkbox_label" for="step_by_step_toggle_checkbox" style="font-size: 17px">Activate Step-by-Step</label>
     </div>
 
-    <button id="previous_step_button" onclick="PreviousStep()" hidden="hidden">Previous step</button>
+    <button id="previous_step_button" onclick="PreviousStep()" class="ordinary_button" hidden="hidden">Previous step</button>
 
-    <button id="next_step_button" onclick="NextStep()" hidden="hidden">Next step</button>
+    <button id="next_step_button" onclick="NextStep()" class="ordinary_button" hidden="hidden">Next step</button>
 
-    <div id="instruction_block">
-        <div id="overlay" class="overlay" onclick="InstructionToggler()"></div>
-        <div id="instruction_text" class="instruction_text">
-            <p>Данный визуализатор представляет собой один из вариантов реализации структуры данных "Персистентная очередь". Основная концепция алгоритма - построение на двух деревьях. Одно из них представляет саму очередь, второе является вспомогательным для совершения различных операций над ней.</p>
-            <p>Инструкция по интерфейсу</p>
-            <p>Перед началом работы настоятельно советуется прочитать техническое описание алгоритма, для понимания его составных частей.</p>
+    <div id="help_text_container" class="help_text_container" hidden="hidden">
+        <div id="help_text" class="help_text"></div>
+    </div>
+
+    <div id="instruction_block" class="instruction_block">
+        <div id="instruction_text">
+            <h1>Инструкция</h1>
+            <p class="instruction_paragraph">
+                Данный визуализатор представляет собой один из вариантов реализации структуры данных "Персистентная очередь".<br>
+                Основная концепция алгоритма - построение на двух деревьях.<br>
+                Одно из них представляет саму очередь, второе является вспомогательным для совершения различных операций над ней.
+            </p>
+            <h1>Интерфейс приложения</h1>
+            <p class="instruction_paragraph">
+                Перед началом работы настоятельно советуется прочитать техническое описание алгоритма, для понимания его составных частей.
+            </p>
             <h2>1. Меню</h2>
-            <p>Здесь можно изменить язык, просмотреть различные конфигурации и тд.</p>
-            <h4>1.1 Перестроить граф</h4>
-            <p>Если в процессе работы граф потерял структурированность (вершины перекрывают друг друга, надписи смешиваются), то эта опция повторно запустит перестройку графа.</p>
+            <p class="instruction_paragraph">
+                Здесь можно изменить язык, просмотреть различные конфигурации и тд.
+            </p>
+            <h4 class="instruction_topic">1.1 Перестроить граф</h4>
+            <p class="instruction_paragraph">
+                Если в процессе работы граф потерял структурированность (вершины перекрывают друг друга, надписи смешиваются), то эта опция повторно запустит перестройку графа.
+            </p>
             <h2>2. Основной интерфейс</h2>
-            <p>2.1 В верхней части расположена строка с объектами Версий. При нажатии на Версию будут выделены соответствующая ей очередь, а также ее вспомогательные списки.</p>
-            <p>2.2 В левой части расположен основной граф - сама очередь.</p>
-            <p>2.3 Справа расположено дерево вспомогательныых списков.</p>
-            <p>2.4 Чтобы добавить или удалить вершину из определенной версии очереди, введите номер искомой версии в соответствующее поле и нажмите кнопку.</p>
-            <p>2.5 Если вы хотите, чтобы весь процесс добавления/удаления происходил пошагово и наглядно - отметьте поле Пошаговая визуализация.</p>
+            <h4 class="instruction_topic">2.1 Строка Версий</h4>
+            <p class="instruction_paragraph">
+                В верхней части расположена строка с объектами Версий.<br>
+                При наведении на нее будет выведена техническая информация.<br>
+                При нажатии на Версию будут выделены соответствующая ей очередь, а также ее вспомогательные списки.
+            </p>
+            <h4 class="instruction_topic">2.2 Главный граф.</h4>
+            <p class="instruction_paragraph">
+                В левой части расположен основной граф - сама очередь.<br>
+                При наведении на ее элементы будет выведена техническая информация.
+            </p>
+            <h4 class="instruction_topic">2.3 Вспомогательный граф</h4>
+            <p class="instruction_paragraph">
+                Справа расположено дерево вспомогательныых списков.
+                При наведении на его элементы будет выведена техническая информация.
+            </p>
+            <h4 class="instruction_topic">2.4 Добавление/Удаление вершин из очереди</h4>
+            <p class="instruction_paragraph">
+                Чтобы добавить в конец или удалить первую вершину из определенной версии очереди, введите номер искомой версии в соответствующее поле и нажмите кнопку.
+            </p>
+            <h4 class="instruction_topic">2.5 Пошаговая визуализация</h4>
+            <p class="instruction_paragraph">
+                Если вы хотите, чтобы весь процесс добавления/удаления происходил пошагово и наглядно - отметьте поле Пошаговая визуализация.
+            </p>
         </div>
     </div>
 
@@ -93,6 +137,7 @@
         Setup();
     </script>
 
+    <div id="overlay" class="overlay" onclick="InstructionToggler()"></div>
 
     <div id="version_node_popup" class="popup">
         <div id="v_n_p_heading">Version pointers:</div>
@@ -113,7 +158,7 @@
         <div class="popup_line"><span id="m_n_p_son_txt">Son:</span><span class="popup_circle" style="background-color: gray"></span><span id="main_node_son_id"></span></div>
     </div>
 
-    <img id="banan" class="banan" src='content/banan_enhanced.gif' hidden="hidden" alt="">
+    <img id="banan" class="banan" src='content/banan_enhanced.gif' alt="">
 
     <svg style="position: absolute; top: 0; left: 0; height: 0; width: 0">
         <defs>

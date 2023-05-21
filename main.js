@@ -44,7 +44,6 @@ let chosen_version = -1;
 let instruction_is_open = false;
 
 
-let locales = ['en', 'ru'];
 let chosen_locale = 'en';
 let text_container_en = new Map([
     ['click_on_old_version_push',
@@ -116,24 +115,9 @@ let text_container_en = new Map([
         'That means dynamic list has reached version head.\n' +
         'So we treat dynamic list as operational (e.g. swap them).'],
 
-    ['define_targeted_node_1',
+    ['define_targeted_node',
         'To do so, we need to define targeted node in main tree.\n' +
-        'We make following operations:\n' +
-        '1) Get current dynamic list node - it\'s node {1}.'],
-
-    ['define_targeted_node_2',
-        'To do so, we need to define targeted node in main tree.\n' +
-        'We make following operations:\n' +
-        '1) Get current dynamic list node - it\'s node {1}.\n' +
-        '2) Get from it targeted node in main tree - it\'s node {2}.'],
-
-    ['define_targeted_node_3',
-        'To do so, we need to define targeted node in main tree.\n' +
-        'We make following operations:\n' +
-        '1) Get current dynamic list node - it\'s node {1}.\n' +
-        '2) Get from it targeted node in main tree - it\'s node {2}.\n' +
-        '3) Get from targeted node it\'s son - node {3}.\n' +
-        'So, now we know the targeted node for creating new dynamic node.'],
+        'It will be node {1}, which we got during previous check of dynamic list on head reaching.'],
 
     ['define_targeted_node_null',
         'To do so, we need to define targeted node in main tree.\n' +
@@ -148,7 +132,7 @@ let text_container_en = new Map([
         'So, now we know the targeted node for creating new dynamic node.'],
 
     ['add_new_dynamic_node_1',
-        'This way, we created new dynamic node.\n' +
+        'Now we can add new dynamic node to the tree.\n' +
         'Let\'s link it to the currently leading one.'],
 
     ['add_new_dynamic_node_2',
@@ -267,24 +251,9 @@ let text_container_ru = new Map([
         'Это означает, что динамический список достиг \'головы\' текущей версии.\n' +
         'Поэтому, теперь мы принимаем динамический список за операционный (меняем их местами).'],
 
-    ['define_targeted_node_1',
+    ['define_targeted_node',
         'Чтобы это сделать, нам необходимо определить целевую вершину в главном графе.\n' +
-        'Для этого мы выполняем следующие операции:\n' +
-        '1) Получаем ведущую вершину динамического списка - это вершина {1}.'],
-
-    ['define_targeted_node_2',
-        'Чтобы это сделать, нам необходимо определить целевую вершину в главном графе.\n' +
-        'Для этого мы выполняем следующие операции:\n' +
-        '1) Получаем ведущую вершину динамического списка - это вершина {1}.\n' +
-        '2) Узнаем из нее целевую вершину в главном графе - это вершина {2}.'],
-
-    ['define_targeted_node_3',
-        'Чтобы это сделать, нам необходимо определить целевую вершину в главном графе.\n' +
-        'Для этого мы выполняем следующие операции:\n' +
-        '1) Получаем ведущую вершину динамического списка - это вершина {1}.\n' +
-        '2) Узнаем из нее целевую вершину в главном графе - это вершина {2}.\n' +
-        '3) Из этой вершины получаем ее сына - вершину {3}.\n' +
-        'Теперь, мы знаем необходимую целевую вершину для создания новой динамической вершины.'],
+        'Ей будет вершина {1}, которую мы получили ранее при проверке на достижение динамическим списком \'головы\'.'],
 
     ['define_targeted_node_null',
         'Чтобы это сделать, нам необходимо определить целевую вершину в главном графе.\n' +
@@ -299,7 +268,7 @@ let text_container_ru = new Map([
         'Теперь, мы знаем необходимую целевую вершину для создания новой динамической вершины.'],
 
     ['add_new_dynamic_node_1',
-        'Таким образом, мы создали новую динамическую вершину.\n' +
+        'Теперь, мы можем добавить новую динамическую вершину к графу.\n' +
         'Привяжем ее к текущей ведущей динамической вершине.'],
 
     ['add_new_dynamic_node_2',
@@ -743,7 +712,7 @@ async function Push__NoStepping(parent_version_num) {
     _links.push(new Link(_links.length, new_node, _nodes[new_node].son_id));
 
 
-    x_coord = _versions.at(-1).x + 32;
+    x_coord = _versions.at(-1).x + 35;
     y_coord = _versions.at(-1).y;
     let first_el = parent_version.head !== 0 ? parent_version.head : new_node;
     let last_el = new_node;
@@ -762,7 +731,7 @@ async function Pop__NoStepping(parent_version_num) {
     StopUpdatingLayout();
 
     let version = _versions[parent_version_num];
-    let x_coord = _versions.at(-1).x + 30;
+    let x_coord = _versions.at(-1).x + 35;
     let y_coord = _versions.at(-1).y;
     ++overall_id;
 
@@ -816,9 +785,7 @@ async function ChangeDynamicList__NoStepping(version) {
     let y_coord = _dynamic_nodes[next_list].y - 30 - GetRandomInt(5);
     _dynamic_nodes.push(new ListNode(next_list, targeted_main_node, _dynamic_nodes.length, targeted_main_node, x_coord, y_coord));
 
-
-    let son_id = (version.dynamic_list !== null) ? version.dynamic_list : 0;
-    _dynamic_links.push(new Link(_dynamic_links.length, _dynamic_nodes.length - 1, son_id));
+    _dynamic_links.push(new Link(_dynamic_links.length, _dynamic_nodes.length - 1, next_list));
 
     version.dynamic_list = _dynamic_nodes.length - 1;
     ++version.dynamic_list_size;
@@ -875,7 +842,7 @@ async function PreparePush([parent_version_num]) {
 async function CopyOldVersion([parent_version_num]) {
     let parent_version = _versions[parent_version_num];
 
-    let x_coord = _versions.at(-1).x + 32;
+    let x_coord = _versions.at(-1).x + 35;
     let y_coord = _versions.at(-1).y;
 
     let first_el = parent_version.head;
@@ -951,7 +918,7 @@ async function TrySwappingLists([version_num]) {
     if (version.dynamic_list === null) {
         is_first_swap = false;
         GetNextStepText('dynamic_list_is_null');
-        return [TargetedNodeDefining, [version_num]];
+        return [TargetedNodeDefiningNull1, [version_num]];
     }
     let dynamic_list = version.dynamic_list;
     highlighters.AddDynamicNode([dynamic_list], true);
@@ -984,7 +951,7 @@ async function ConfirmListsSwap([version_num]) {
     highlighters.Clear();
     let version = _versions[version_num];
     let head = version.head;
-    if (version.dynamic_list !== null && _nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id === head) {
+    if (_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id === head) {
         version.operational_list = version.dynamic_list;
         version.operational_list_size = version.dynamic_list_size;
         version.dynamic_list = null;
@@ -1022,42 +989,23 @@ async function FirstSwapSuccess() {
 
 async function TargetedNodeDefining([version_num]) {
     let version = _versions[version_num];
-    highlighters.Clear(false)
-    if (version.dynamic_list !== null) {
-        let dynamic_node = version.dynamic_list;
-        highlighters.AddDynamicNode([dynamic_node], true);
-        GetNextStepText('define_targeted_node_1', _dynamic_nodes[dynamic_node].label);
-        return [TargetedNodeDefining2, [version_num]];
-    } else {
-        let tail = version.tail;
-        highlighters.AddMainNode([tail], true);
-        GetNextStepText('define_targeted_node_null', _nodes[tail].label);
-        return [TargetedNodeDefiningNull2, [version_num]];
-    }
-
-}
-async function TargetedNodeDefining2([version_num]) {
-    let version = _versions[version_num];
-
-    let dynamic_node = version.dynamic_list;
-    let targeted_node = _dynamic_nodes[dynamic_node].target_node;
-    highlighters.Clear(false);
-    highlighters.AddMainNode([targeted_node], true);
-    GetNextStepText('define_targeted_node_2', _dynamic_nodes[dynamic_node].label, _nodes[targeted_node].label);
-
-    return [TargetedNodeDefining3, [version_num]];
-}
-async function TargetedNodeDefining3([version_num]) {
-    let version = _versions[version_num];
 
     let dynamic_node = version.dynamic_list;
     let targeted_node = _dynamic_nodes[dynamic_node].target_node;
     let new_targeted_main_node = _nodes[targeted_node].son_id;
     highlighters.Clear(false);
     highlighters.AddMainNode([new_targeted_main_node], true);
-    GetNextStepText('define_targeted_node_3', _dynamic_nodes[dynamic_node].label, _nodes[targeted_node].label, _nodes[new_targeted_main_node].label);
-
+    GetNextStepText('define_targeted_node', _nodes[new_targeted_main_node].label);
     return [NewDynamicNodeCreation, [version_num, new_targeted_main_node]];
+}
+
+async function TargetedNodeDefiningNull1([version_num]) {
+    let version = _versions[version_num];
+
+    let tail = version.tail;
+    highlighters.AddMainNode([tail], true);
+    GetNextStepText('define_targeted_node_null', _nodes[tail].label);
+    return [TargetedNodeDefiningNull2, [version_num]];
 }
 async function TargetedNodeDefiningNull2([version_num]) {
     let version = _versions[version_num];
@@ -1068,7 +1016,6 @@ async function TargetedNodeDefiningNull2([version_num]) {
     highlighters.AddMainNode([new_targeted_main_node], true);
     GetNextStepText('define_targeted_node_null2', _nodes[tail].label, _nodes[new_targeted_main_node].label);
     return [NewDynamicNodeCreation, [version_num, new_targeted_main_node]];
-
 }
 
 async function NewDynamicNodeCreation([version_num, targeted_main_node]) {
@@ -1082,14 +1029,14 @@ async function NewDynamicNodeCreation([version_num, targeted_main_node]) {
     let son_id = (version.dynamic_list !== null) ? version.dynamic_list : 0;
     _dynamic_links.push(new Link(_dynamic_links.length, _dynamic_nodes.length - 1, son_id));
 
-    version.dynamic_list = _dynamic_nodes.length - 1;
-    ++version.dynamic_list_size;
-
     if (version.dynamic_list !== null) {
         GetNextStepText('add_new_dynamic_node_1');
     } else {
         GetNextStepText('add_new_dynamic_node_2');
     }
+
+    version.dynamic_list = _dynamic_nodes.length - 1;
+    ++version.dynamic_list_size;
 
     await UpdateSecondaryLayout__NoPhysics();
     HighlightVersion(version_num);
@@ -1252,8 +1199,7 @@ function HideAll() {
         element.style.display = 'none';
     }
     let banan = document.getElementById('banan');
-    banan.style.visibility = 'visible';
-    banan.style.display = 'flex';
+    banan.style.display = 'block';
 }
 
 async function WaitForNextAction() {
@@ -1282,7 +1228,7 @@ function PrepareStepByStepLayout() {
     document.getElementById('update_layout_button').hidden = true;
     document.getElementById('next_step_button').hidden = false;
     document.getElementById('previous_step_button').hidden = false;
-    document.getElementById('help_text').hidden = false;
+    document.getElementById('help_text_container').hidden = false;
 }
 function ReturnFromStepByStepLayout() {
     document.getElementById('push_form').hidden = false;
@@ -1292,7 +1238,7 @@ function ReturnFromStepByStepLayout() {
     document.getElementById('update_layout_button').hidden = false;
     document.getElementById('next_step_button').hidden = true;
     document.getElementById('previous_step_button').hidden = true;
-    document.getElementById('help_text').hidden = true;
+    document.getElementById('help_text_container').hidden = true;
 }
 
 function SetupVersionSVG() {
@@ -1375,7 +1321,7 @@ function UpdateVersionsLayout() {
         .text(node => node.label)
         .attr('class', 'version_text')
         .attr('dx', 7)
-        .attr('dy', 20);
+        .attr('dy', 25);
 
     MakeMovableVersions();
 
@@ -2001,7 +1947,7 @@ function ShowInstruction() {
     let overlay = document.getElementById('overlay');
     overlay.classList.remove('overlay_off');
     overlay.classList.add('overlay_on');
-    let instruction = document.getElementById('instruction_text');
+    let instruction = document.getElementById('instruction_block');
     instruction.classList.remove('close_instruction');
     instruction.classList.add('open_instruction');
 }
@@ -2009,7 +1955,7 @@ function HideInstruction() {
     let overlay = document.getElementById('overlay');
     overlay.classList.remove('overlay_on');
     overlay.classList.add('overlay_off');
-    let instruction = document.getElementById('instruction_text');
+    let instruction = document.getElementById('instruction_block');
     instruction.classList.remove('open_instruction');
     instruction.classList.add('close_instruction');
 }

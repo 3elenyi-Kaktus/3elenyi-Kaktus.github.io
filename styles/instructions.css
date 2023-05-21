@@ -41,18 +41,29 @@
     }
 }
 
-.instruction_text {
+.instruction_block {
     visibility: hidden;
     position: fixed;
     width: 70%;
     top: 10%;
     left: 50%;
+    bottom: 10%;
     background: white;
     transform: translate(-50%);
     border-radius: 10px;
     padding: 10px;
     border: 5px solid #c2c2c2;
     z-index: 8;
+    overflow: auto;
+}
+.instruction_topic {
+    margin-left: 25px;
+    margin-bottom: 5px;
+}
+.instruction_paragraph {
+    margin-left: 45px;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 .open_instruction {

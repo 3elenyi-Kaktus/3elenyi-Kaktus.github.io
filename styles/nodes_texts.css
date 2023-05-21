@@ -1,15 +1,15 @@
 .version_text {
     fill: white;
-    font-size: 15px;
+    font-size: 17px;
 }
 
 .graph_text {
     fill: black;
-    font-size: 15px;
+    font-size: 17px;
 }
 
 .faint_text {
     fill: black;
-    font-size: 15px;
+    font-size: 17px;
     opacity: 10%;
 }
