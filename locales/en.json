@@ -1,0 +1,38 @@
+{
+  "title": "Persistent Queue",
+  "body": {
+    "locale_switcher_label": "Select locale:",
+    "instruction_button": "Instruction",
+    "configuration_switcher_label": "Select configuration:",
+    "reset_button": "Reset environment",
+    "random_graph_button": "Create random graph",
+
+    "CS_1": "None",
+    "CS_2": "Push to ordinary queue",
+    "CS_3": "Pop from 1-element queue",
+    "CS_4": "Pop from 2-element queue",
+    "CS_5": "Pop from ordinary queue",
+    "CS_6": "Dynamic list creation",
+    "CS_7": "Auxiliary lists swap",
+
+    "update_layout_button": "Update layout",
+    "push_version_label": "Push new element to specific version:",
+    "push_button": "Push",
+    "pop_version_label": "Pop last element from specific version:",
+    "pop_button": "Pop",
+    "step_by_step_toggle_checkbox_label": "Activate step-by-step",
+    "previous_step_button": "Previous step",
+    "next_step_button": "Next step",
+    "v_n_p_heading": "Version pointers:",
+    "v_n_p_head_txt": "Head:",
+    "v_n_p_tail_txt": "Tail:",
+    "v_n_p_dynamic_txt": "Dynamic:",
+    "v_n_p_operational_txt": "Operational:",
+    "d_n_p_heading": "Node pointers:",
+    "d_n_p_son_txt": "Son:",
+    "d_n_p_target_txt": "Target node:",
+    "m_n_p_heading": "Node pointers:",
+    "m_n_p_son_txt": "Son:"
+  }
+}
+

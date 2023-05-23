@@ -1,7 +1,5 @@
 //TODO
-// Поправить сохранение каждого состояния, кажется сейчас это не так эффективно
-//TODO
-// Если после попытки свопнуть списки мы не смогли этого сделать - полученную вершину можно запомнить и сразу использовать ее для создания динамической
+//
 
 let _nodes = [];
 let _links = [];
@@ -35,16 +33,18 @@ let is_updating_layout = false;
 let step_by_step_is_active = false;
 let next_step_required = false;
 let previous_step_required = false;
+let break_out = false;
 let is_first_swap = true;
 let is_push = true;
 let highlighters;
 
 let chosen_version = -1;
+let chosen_config = 'none';
 
 let instruction_is_open = false;
 
 
-let chosen_locale = 'en';
+let chosen_locale = 'not_defined';
 let text_container_en = new Map([
     ['click_on_old_version_push',
         'We want to push new node to version {1}.\n' +
@@ -86,7 +86,8 @@ let text_container_en = new Map([
 
     ['dynamic_list_is_null',
         'We check if dynamic list reached corresponding version head.\n' +
-        'In our case, dynamic list doesn\'t exist at all.'],
+        'In our case, dynamic list doesn\'t exist at all.\n' +
+        'So we can go directly to creating a new one.'],
 
     ['get_leading_dynamic_node',
         'To swap lists we have to check if dynamic list reached corresponding version head.\n' +
@@ -222,7 +223,8 @@ let text_container_ru = new Map([
 
     ['dynamic_list_is_null',
         'Проверим, достиг ли динамический список \'головы\' текущей версии.\n' +
-        'В нашем случае, динамический список отсутствует.'],
+        'В нашем случае, динамический список отсутствует.\n' +
+        'Поэтому, можем сразу начать с создания нового.'],
 
     ['get_leading_dynamic_node',
         'Чтобы поменять списки местами, необходимо проверить достиг ли динамический список \'головы\' текущей версии.\n' +
@@ -321,57 +323,129 @@ let text_containers = new Map([
     ['ru', text_container_ru],
 ]);
 
-let html_page_locale_en = new Map([
-    ['title', 'Persistent Queue'],
-
-    ['locale_switcher_label', 'Select locale:'],
-    ['update_layout_button', 'Update layout'],
-    ['push_version_label', 'Push new element to specific version:'],
-    ['push_button', 'Push'],
-    ['pop_version_label', 'Pop last value from specific version:'],
-    ['pop_button', 'Pop'],
-    ['step_by_step_toggle_checkbox_label', 'Activate step-by-step'],
-    ['previous_step_button', 'Previous step'],
-    ['next_step_button', 'Next step'],
-
-    ['v_n_p_heading', 'Version pointers:'],
-    ['v_n_p_head_txt', 'Head:'],
-    ['v_n_p_tail_txt', 'Tail:'],
-    ['v_n_p_dynamic_txt', 'Dynamic:'],
-    ['v_n_p_operational_txt', 'Operational:'],
-    ['d_n_p_heading', 'Node pointers:'],
-    ['d_n_p_son_txt', 'Son:'],
-    ['d_n_p_target_txt', 'Target node:'],
-    ['m_n_p_heading', 'Node pointers:'],
-    ['m_n_p_son_txt', 'Son:'],
+let html_page_container = new Map([
+    ['en', './locales/en.json'],
+    ['ru', './locales/ru.json'],
 ]);
-let html_page_locale_ru = new Map([
-    ['title', 'Персистентная очередь'],
+let instructions_container = new Map([
+    ['ru',
+        "<h1>Инструкция</h1>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    Данный визуализатор представляет собой один из вариантов реализации структуры данных \"Персистентная очередь\".<br>\n" +
+        "    Основная концепция алгоритма - построение на двух деревьях.<br>\n" +
+        "    Одно из них представляет саму очередь, второе является вспомогательным для совершения различных операций над ней.<br>\n" +
+        "    Перед началом работы настоятельно советуется прочитать техническое описание алгоритма, для понимания его составных частей.\n" +
+        "</p>\n" +
+        "<h2>1. Меню</h2>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    Здесь можно изменить язык, просмотреть различные конфигурации и тд.\n" +
+        "</p>\n" +
+        "<h4 class=\"instruction_topic\">1.1 Выбор конфигурации</h4>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    Существует набор готовых пресетов, которые пошагово показывают, как проходят различные процессы в особых случаях.\n" +
+        "</p>\n" +
+        "<h4 class=\"instruction_topic\">1.2 Перестройка графа</h4>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    Если в процессе работы граф потерял структурированность (вершины перекрывают друг друга, надписи смешиваются), то эта опция повторно запустит перестройку графа.\n" +
+        "</p>\n" +
+        "<h4 class=\"instruction_topic\">1.3 Сброс данных</h4>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    Сбросить всю существующую информацию и вернуться к состоянию на момент создания структуры.\n" +
+        "</p>\n" +
+        "<h4 class=\"instruction_topic\">1.4 Создание случайного графа</h4>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    Создать новый граф, набирающийся операциями Добавления вершин к случайным Версиям.\n" +
+        "</p>\n" +
+        "<h2>2. Основной интерфейс</h2>\n" +
+        "<h4 class=\"instruction_topic\">2.1 Строка Версий</h4>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    В верхней части расположена строка с объектами Версий.<br>\n" +
+        "    При наведении на нее будет выведена техническая информация.<br>\n" +
+        "    При нажатии на Версию будут выделены соответствующая ей очередь, а также ее вспомогательные списки.\n" +
+        "</p>\n" +
+        "<h4 class=\"instruction_topic\">2.2 Главный граф.</h4>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    В левой части расположен основной граф - сама очередь.<br>\n" +
+        "    При наведении на ее элементы будет выведена техническая информация.\n" +
+        "</p>\n" +
+        "<h4 class=\"instruction_topic\">2.3 Вспомогательный граф</h4>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    Справа расположено дерево вспомогательных списков.<br>\n" +
+        "    При наведении на его элементы будет выведена техническая информация.\n" +
+        "</p>\n" +
+        "<h4 class=\"instruction_topic\">2.4 Добавление/Удаление вершин из очереди</h4>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    Чтобы добавить в конец или удалить первую вершину из определенной версии очереди, введите номер искомой версии в соответствующее поле и нажмите кнопку.\n" +
+        "</p>\n" +
+        "<h4 class=\"instruction_topic\">2.5 Пошаговая визуализация</h4>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    Если вы хотите, чтобы весь процесс добавления/удаления происходил пошагово и наглядно - отметьте поле Пошаговая визуализация.\n" +
+        "</p>"
+    ],
 
-    ['locale_switcher_label', 'Выберите язык:'],
-    ['update_layout_button', 'Обновить граф'],
-    ['push_version_label', 'Добавить новую вершину к версии:'],
-    ['push_button', 'Добавить'],
-    ['pop_version_label', 'Удалить последнюю вершину из версии:'],
-    ['pop_button', 'Удалить'],
-    ['step_by_step_toggle_checkbox_label', 'Пошаговая визуализация'],
-    ['previous_step_button', 'Предыдущий шаг'],
-    ['next_step_button', 'Следующий шаг'],
-
-    ['v_n_p_heading', 'Указатели версии:'],
-    ['v_n_p_head_txt', 'Голова:'],
-    ['v_n_p_tail_txt', 'Хвост:'],
-    ['v_n_p_dynamic_txt', 'Динамический:'],
-    ['v_n_p_operational_txt', 'Операционный:'],
-    ['d_n_p_heading', 'Указатели вершины:'],
-    ['d_n_p_son_txt', 'Сын:'],
-    ['d_n_p_target_txt', 'Целевая вершина:'],
-    ['m_n_p_heading', 'Указатели вершины:'],
-    ['m_n_p_son_txt', 'Сын:'],
+    ['en',
+        "<h1>Instruction</h1>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    This is the visualisator of one of possible algorithms for persistent queue structure realisation.<br>\n" +
+        "    Algorithm's main concept - building two graphs.<br>\n" +
+        "    One of them is actually the queue, the other - auxiliary one, for different operations on the queue.<br>\n" +
+        "    Before startup it is strictly advised to fully acknowledge technical algorithm basics, for it's components understanding.\n" +
+        "</p>\n" +
+        "<h2>1. Menu Interface</h2>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    You can change language here, choose different configs, etc.\n" +
+        "</p>\n" +
+        "<h4 class=\"instruction_topic\">1.1 Configs</h4>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    There is a set of ready-to-go presets, which can show different situations of algorithm behaviour.\n" +
+        "</p>\n" +
+        "<h4 class=\"instruction_topic\">1.2 Graph layout rebuild</h4>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    If during the usage graphs are not well structured (nodes or labels are overlapping), this option will restart the graph building.\n" +
+        "</p>\n" +
+        "<h4 class=\"instruction_topic\">1.3 Resetting environment</h4>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    This option will delete all information and return to initial state.\n" +
+        "</p>\n" +
+        "<h4 class=\"instruction_topic\">1.4 Random graph creation</h4>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    Make new graph, built by continuous Add node operations to random Versions.\n" +
+        "</p>\n" +
+        "<h2>2. Main Interface</h2>\n" +
+        "<h4 class=\"instruction_topic\">2.1 Versions</h4>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    In the upper part are placed Versions objects.<br>\n" +
+        "    On mouse hover they will display some technical information, which is stored in them.<br>\n" +
+        "    If clicked, corresponding queue and it's auxiliary lists will be highlighted.\n" +
+        "</p>\n" +
+        "<h4 class=\"instruction_topic\">2.2 Main graph</h4>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    In the left side is placed main graph - the queue itself.<br>\n" +
+        "    On mouse hover on nodes will be displayed some technical information which is stored in them.\n" +
+        "</p>\n" +
+        "<h4 class=\"instruction_topic\">2.3 Auxiliary graph</h4>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    In the right side is placed the auxiliary lists tree.<br>\n" +
+        "    On mouse hover on nodes will be displayed some technical information which is stored in them.\n" +
+        "</p>\n" +
+        "<h4 class=\"instruction_topic\">2.4 Adding/Deleting nodes from queue</h4>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    In order to push node to the queue end or pop first one from the certain queue version, enter the desired version number in corresponding field.\n" +
+        "</p>\n" +
+        "<h4 class=\"instruction_topic\">2.5 Step-by-step visualization</h4>\n" +
+        "<p class=\"instruction_paragraph\">\n" +
+        "    If you want to watch internal processes of pushing/popping nodes step-by-step - check the 'Activate step-by-step' checkbox.\n" +
+        "</p>"
+    ]
 ]);
-let html_page_containers = new Map([
-    ['en', html_page_locale_en],
-    ['ru', html_page_locale_ru],
+
+let configs = new Map([
+    ['push_1', ConfigOrdinaryQueuePush],
+    ['pop_1', ConfigOneElementedQueuePop],
+    ['pop_2', ConfigTwoElementedQueuePop],
+    ['pop_3', ConfigOrdinaryQueuePop],
+    ['dyn_1', ConfigDynamicListCreation],
+    ['dyn_2', ConfigAuxiliaryListsSwap],
 ]);
 
 
@@ -815,9 +889,17 @@ async function OperationsCoordinator(parent_version_num) {
         HighlightVersion(chosen_version);
         console.log('Next call', next_function_call, args);
         action = await WaitForNextAction();
+        if (action === 'break_out') {
+            ReturnFromStepByStepLayout();
+            return;
+        }
         while (action === "prev") {
             if (index < 0) {
                 action = await WaitForNextAction();
+                if (action === 'break_out') {
+                    ReturnFromStepByStepLayout();
+                    return;
+                }
             } else {
                 console.warn('Getting previous state', states[index]);
                 [args, next_function_call, highlighters] = states[index].RestoreState(old_size);
@@ -1149,6 +1231,82 @@ async function EndPopping() {
 
 
 
+async function ConfigOrdinaryQueuePush() {
+    simulation_time = 1;
+    await Push__NoStepping(0);
+    await Push__NoStepping(1);
+    await Push__NoStepping(2);
+    await Push__NoStepping(3);
+    simulation_time = 500;
+    await Push__NoStepping(4);
+    simulation_time = 3000;
+    await Push(5);
+}
+async function ConfigOneElementedQueuePop() {
+    simulation_time = 500;
+    await Push__NoStepping(0);
+    simulation_time = 3000;
+    await Pop(1);
+}
+async function ConfigTwoElementedQueuePop() {
+    simulation_time = 1;
+    await Push__NoStepping(0);
+    simulation_time = 500;
+    await Push__NoStepping(1);
+    simulation_time = 3000;
+    await Pop(2);
+}
+async function ConfigOrdinaryQueuePop() {
+    simulation_time = 1;
+    await Push__NoStepping(0);
+    await Push__NoStepping(1);
+    await Push__NoStepping(2);
+    await Push__NoStepping(3);
+    await Push__NoStepping(4);
+    simulation_time = 500;
+    await Push__NoStepping(5);
+    simulation_time = 3000;
+    await Pop(6);
+}
+async function ConfigDynamicListCreation() {
+    simulation_time = 1;
+    await Push__NoStepping(0);
+    await Push__NoStepping(1);
+    await Push__NoStepping(2);
+    simulation_time = 500;
+    await Push__NoStepping(3);
+    simulation_time = 3000;
+    await Push(4);
+}
+async function ConfigAuxiliaryListsSwap() {
+    simulation_time = 1;
+    await Push__NoStepping(0);
+    await Push__NoStepping(1);
+    await Push__NoStepping(2);
+    await Push__NoStepping(3);
+    await Push__NoStepping(4);
+    simulation_time = 500;
+    await Push__NoStepping(5);
+    simulation_time = 3000;
+    await Push(6);
+}
+
+
+async function RandomGraph(size) {
+    await ResetEnvironment();
+    simulation_time = 1;
+    let max_version = 0;
+    for (let iter = 0; iter < size; ++iter) {
+        let version = GetRandomInt(max_version);
+        ++max_version;
+        await Push__NoStepping(version);
+    }
+    simulation_time = 7000;
+    await Push__NoStepping(max_version);
+    simulation_time = 3000;
+}
+
+
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -1203,8 +1361,12 @@ function HideAll() {
 }
 
 async function WaitForNextAction() {
-    while (!next_step_required && !previous_step_required) {
+    while (!next_step_required && !previous_step_required && !break_out) {
         await sleep(10);
+    }
+    if (break_out) {
+        break_out = false;
+        return 'break_out';
     }
     if (next_step_required) {
         next_step_required = false;
@@ -1223,7 +1385,7 @@ function PreviousStep() {
 function PrepareStepByStepLayout() {
     document.getElementById('push_form').hidden = true;
     document.getElementById('pop_form').hidden = true;
-    document.getElementById('debug_button').hidden = true;
+    // document.getElementById('debug_button').hidden = true;
     document.getElementById('step_by_step_container').hidden = true;
     document.getElementById('update_layout_button').hidden = true;
     document.getElementById('next_step_button').hidden = false;
@@ -1233,7 +1395,7 @@ function PrepareStepByStepLayout() {
 function ReturnFromStepByStepLayout() {
     document.getElementById('push_form').hidden = false;
     document.getElementById('pop_form').hidden = false;
-    document.getElementById('debug_button').hidden = false;
+    // document.getElementById('debug_button').hidden = false;
     document.getElementById('step_by_step_container').hidden = false;
     document.getElementById('update_layout_button').hidden = false;
     document.getElementById('next_step_button').hidden = true;
@@ -1615,8 +1777,9 @@ async function UpdateLayout__NoPhysics() {
 }
 
 async function Setup() {
-    BindLocaleSwitcher();
+    await BindLocaleSwitcher();
     BindStepByStepToggler();
+    BindConfigurationSwitcher();
 
     SetupVersionSVG();
     SetupMainSVG();
@@ -1629,31 +1792,86 @@ async function Setup() {
     await UpdateLayout();
     StopUpdatingLayout();
 }
-function BindLocaleSwitcher() {
+async function BindLocaleSwitcher() {
     let switcher = document.querySelector('[id=locale_switcher]');
-    switcher.onchange = (event) => {
-        SetLocale(event.target.value);
+    switcher.onchange = async (event) => {
+        await SetLocale(event.target.value);
     };
+    let event = {target: {value: 'en'}};
+    await switcher.onchange(event);
 }
-function SetLocale(new_locale) {
+async function SetLocale(new_locale) {
     if (new_locale === chosen_locale) {
         return;
     }
     chosen_locale = new_locale;
-    html_page_containers.get(chosen_locale).forEach((translation, id) => {
+
+    let path = html_page_container.get(chosen_locale);
+    let response = await fetch(path);
+    let translation = await response.json();
+
+    document.title = translation['title'];
+
+    translation = translation.body;
+    for (let id in translation) {
         let element = document.getElementById(id);
-        if (element !== null) {
-            element.innerText = translation;
-        } else if (id === 'title') {
-            document.title = translation;
+        if (element === null) {
+            console.warn("Unknown element in translation");
+            continue;
         }
-    });
+        console.log(id, translation[id]);
+        element.innerHTML = translation[id];
+    }
+
+    document.getElementById('instruction_text').innerHTML = instructions_container.get(new_locale)
 }
 function BindStepByStepToggler() {
     let switcher = document.querySelector('[id=step_by_step_toggle_checkbox]');
     switcher.onchange = (event) => {
         step_by_step_is_active = !step_by_step_is_active;
     };
+}
+function BindConfigurationSwitcher() {
+    let switcher = document.querySelector('[id=configuration_switcher]');
+    switcher.onchange = async (event) => {
+        await SetConfiguration(event.target.value);
+    };
+}
+async function SetConfiguration(config_to_set) {
+    if (config_to_set === 'none') {
+        return;
+    }
+    chosen_config = config_to_set;
+    await ResetEnvironment();
+    step_by_step_is_active = true;
+
+    await configs.get(config_to_set)();
+
+    step_by_step_is_active = false
+}
+async function ResetEnvironment() {
+    if (step_by_step_is_active) {
+        break_out = true;
+        await sleep(20);
+    }
+
+    _nodes = [];
+    _links = [];
+    _dynamic_nodes = [];
+    _dynamic_links = [];
+    _versions = [];
+    overall_id = 1;
+    chosen_version = -1;
+
+    SetupVersionSVG();
+    SetupMainSVG();
+    SetupSecondarySVG();
+
+    _versions.push(new Version(0, 0, null, null, 0, 0, 0, 0, 'N', null, 25, 25));
+    _nodes.push(new Node(null, 0, 'Null', 40, 40));
+    _dynamic_nodes.push(new ListNode(null, null, 0, 'Null', 40, 40));
+
+    await UpdateLayout__NoPhysics();
 }
 
 function ChangeClassWithRetain(object, ind, selection, save, change_to) {

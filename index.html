@@ -10,7 +10,9 @@
 </head>
 <body>
     <div id="side_bar" class="side_bar">
-        <span class="close_button" onclick="CloseSideBar()">&times;</span>
+        <div class="side_bar_close_button" onclick="CloseSideBar()">
+            <div class="cross"></div>
+        </div>
 
         <div class="side_bar_container">
             <label id="locale_switcher_label" class="side_bar_text" for="locale_switcher">Select locale:</label>
@@ -20,23 +22,28 @@
             </select>
         </div>
 
-        <div class="side_bar_container" style="display: none">
+        <button id="instruction_button" class="menu_button" onclick="InstructionToggler();CloseSideBar();">Instruction</button>
+
+        <div class="side_bar_container">
             <label id="configuration_switcher_label" class="side_bar_text" for="configuration_switcher">Select configuration:</label>
             <select id="configuration_switcher" class="option_switcher" name="configuration_switcher" autocomplete="off">
-                <option value="1" class="opt" selected>None</option>
-                <option value="2" class="opt">Pop from 1-element queue</option>
-                <option value="3" class="opt">Pop from 2-element queue</option>
-                <option value="4" class="opt">Pop from ordinary queue</option>
-                <option value="5" class="opt">Dynamic list creation</option>
-                <option value="6" class="opt">Auxiliary lists swap</option>
+                <option id="CS_1" value="none" class="opt" selected>None</option>
+                <option id="CS_2" value="push_1" class="opt">Push to ordinary queue</option>
+                <option id="CS_3" value="pop_1" class="opt">Pop from 1-element queue</option>
+                <option id="CS_4" value="pop_2" class="opt">Pop from 2-element queue</option>
+                <option id="CS_5" value="pop_3" class="opt">Pop from ordinary queue</option>
+                <option id="CS_6" value="dyn_1" class="opt">Dynamic list creation</option>
+                <option id="CS_7" value="dyn_2" class="opt">Auxiliary lists swap</option>
             </select>
         </div>
 
-        <button id="debug_button" class="menu_button" onclick="Debug();CloseSideBar();">Debug</button>
+<!--        <button id="debug_button" class="menu_button" onclick="Debug();CloseSideBar();">Debug</button>-->
 
-        <button id="update_layout_button" class="menu_button" onclick="UpdateLayout();CloseSideBar();">Update Layout</button>
+        <button id="update_layout_button" class="menu_button" onclick="UpdateLayout();CloseSideBar();">Update layout</button>
 
-        <button id="instruction_button" class="menu_button" onclick="InstructionToggler();CloseSideBar();">Instruction</button>
+        <button id="reset_button" class="menu_button" onclick="ResetEnvironment();CloseSideBar();">Reset environment</button>
+
+        <button id="random_graph_button" class="menu_button" onclick="RandomGraph(50);CloseSideBar();">Create random graph</button>
     </div>
 
     <div class="container_flex">
@@ -87,49 +94,6 @@
 
     <div id="instruction_block" class="instruction_block">
         <div id="instruction_text">
-            <h1>Инструкция</h1>
-            <p class="instruction_paragraph">
-                Данный визуализатор представляет собой один из вариантов реализации структуры данных "Персистентная очередь".<br>
-                Основная концепция алгоритма - построение на двух деревьях.<br>
-                Одно из них представляет саму очередь, второе является вспомогательным для совершения различных операций над ней.
-            </p>
-            <h1>Интерфейс приложения</h1>
-            <p class="instruction_paragraph">
-                Перед началом работы настоятельно советуется прочитать техническое описание алгоритма, для понимания его составных частей.
-            </p>
-            <h2>1. Меню</h2>
-            <p class="instruction_paragraph">
-                Здесь можно изменить язык, просмотреть различные конфигурации и тд.
-            </p>
-            <h4 class="instruction_topic">1.1 Перестроить граф</h4>
-            <p class="instruction_paragraph">
-                Если в процессе работы граф потерял структурированность (вершины перекрывают друг друга, надписи смешиваются), то эта опция повторно запустит перестройку графа.
-            </p>
-            <h2>2. Основной интерфейс</h2>
-            <h4 class="instruction_topic">2.1 Строка Версий</h4>
-            <p class="instruction_paragraph">
-                В верхней части расположена строка с объектами Версий.<br>
-                При наведении на нее будет выведена техническая информация.<br>
-                При нажатии на Версию будут выделены соответствующая ей очередь, а также ее вспомогательные списки.
-            </p>
-            <h4 class="instruction_topic">2.2 Главный граф.</h4>
-            <p class="instruction_paragraph">
-                В левой части расположен основной граф - сама очередь.<br>
-                При наведении на ее элементы будет выведена техническая информация.
-            </p>
-            <h4 class="instruction_topic">2.3 Вспомогательный граф</h4>
-            <p class="instruction_paragraph">
-                Справа расположено дерево вспомогательныых списков.
-                При наведении на его элементы будет выведена техническая информация.
-            </p>
-            <h4 class="instruction_topic">2.4 Добавление/Удаление вершин из очереди</h4>
-            <p class="instruction_paragraph">
-                Чтобы добавить в конец или удалить первую вершину из определенной версии очереди, введите номер искомой версии в соответствующее поле и нажмите кнопку.
-            </p>
-            <h4 class="instruction_topic">2.5 Пошаговая визуализация</h4>
-            <p class="instruction_paragraph">
-                Если вы хотите, чтобы весь процесс добавления/удаления происходил пошагово и наглядно - отметьте поле Пошаговая визуализация.
-            </p>
         </div>
     </div>
 
@@ -166,12 +130,12 @@
                     id="arrow"
                     viewBox="0 0 200 320"
                     refX="0"
-                    refY="160"
+                    refY="100"
                     markerWidth="5"
                     markerHeight="5"
                     orient="auto-start-reverse"
                     stroke="black">
-                    <polyline points="0 0, 200 160, 0 320"></polyline>
+                    <polyline points="0 0, 200 100, 0 200"></polyline>
             </marker>
         </defs>
     </svg>
