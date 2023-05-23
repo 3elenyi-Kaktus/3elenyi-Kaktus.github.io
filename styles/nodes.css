@@ -61,8 +61,10 @@
 @keyframes BlinkingNode {
     from {
         opacity: 100;
+        stroke-width: 3px;
     }
     to {
         opacity: 0;
+        stroke-width: 0;
     }
 }

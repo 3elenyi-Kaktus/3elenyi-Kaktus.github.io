@@ -1,5 +1,7 @@
 //TODO
-//
+// dark theme
+//TODO
+// random graph creation with different parameters
 
 let _nodes = [];
 let _links = [];
@@ -726,6 +728,7 @@ async function Push(parent_version_num = -1) {
         is_push = true;
         await OperationsCoordinator(parent_version_num);
     } else {
+        TurnOffVersionHighlighting();
         await Push__NoStepping(parent_version_num);
     }
     console.log('Push made successfully');
@@ -750,6 +753,7 @@ async function Pop(parent_version_num = -1) {
         is_push = false;
         await OperationsCoordinator(parent_version_num);
     } else {
+        TurnOffVersionHighlighting();
         await Pop__NoStepping(parent_version_num);
     }
     console.log('Pop made successfully');
@@ -1386,7 +1390,7 @@ function PrepareStepByStepLayout() {
     document.getElementById('push_form').hidden = true;
     document.getElementById('pop_form').hidden = true;
     // document.getElementById('debug_button').hidden = true;
-    document.getElementById('step_by_step_container').hidden = true;
+    document.getElementById('step_by_step_container').classList.add('hide');
     document.getElementById('update_layout_button').hidden = true;
     document.getElementById('next_step_button').hidden = false;
     document.getElementById('previous_step_button').hidden = false;
@@ -1396,7 +1400,7 @@ function ReturnFromStepByStepLayout() {
     document.getElementById('push_form').hidden = false;
     document.getElementById('pop_form').hidden = false;
     // document.getElementById('debug_button').hidden = false;
-    document.getElementById('step_by_step_container').hidden = false;
+    document.getElementById('step_by_step_container').classList.remove('hide');
     document.getElementById('update_layout_button').hidden = false;
     document.getElementById('next_step_button').hidden = true;
     document.getElementById('previous_step_button').hidden = true;
@@ -1834,6 +1838,7 @@ function BindStepByStepToggler() {
 function BindConfigurationSwitcher() {
     let switcher = document.querySelector('[id=configuration_switcher]');
     switcher.onchange = async (event) => {
+        CloseSideBar();
         await SetConfiguration(event.target.value);
     };
 }
@@ -1887,6 +1892,12 @@ function HighlightVersion(version_num) {
     } else {
         ver_svg.select('g.nodes').select("[id='" + version_num + "']").dispatch('click');
     }
+}
+function TurnOffVersionHighlighting() {
+    if (chosen_version < 0) {
+        return;
+    }
+    ver_svg.select('g.nodes').select("[id='" + chosen_version + "']").dispatch('click');
 }
 function VersionClick(event, object) {
     let version = _versions[object.id];
