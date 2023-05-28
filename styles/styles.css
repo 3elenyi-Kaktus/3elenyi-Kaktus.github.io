@@ -1,5 +1,6 @@
 @import "sidebar_openbutton.css";
 @import "sidebar.css";
+@import "rnd_graph_block.css";
 @import "popups.css";
 @import "nodes.css";
 @import "nodes_texts.css";
@@ -20,7 +21,7 @@
 
 html, body {
     height: 100%;   /*for main svg container's flexbox*/
-    font-family: "Arial Black", sans-serif;
+    font-family: "Arial", sans-serif;
     /*overflow: hidden;   !*to prevent scroll on body margin*!*/
 }
 
@@ -84,11 +85,11 @@ html, body {
 }
 
 
-.push_form, .pop_form {
+.push_form, .pop_form, .random_form {
     margin-top: 10px;
 }
 
-.push_version, .pop_version {
+.push_version, .pop_version, .random_size, .random_coeff {
     background-color: #e7e7e7;
     border: none;
     border-bottom: 3px solid darkblue;

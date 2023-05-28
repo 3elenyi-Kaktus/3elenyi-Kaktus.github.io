@@ -42,8 +42,11 @@ let highlighters;
 
 let chosen_version = -1;
 let chosen_config = 'none';
-
+let observer = {
+    stop: false
+};
 let instruction_is_open = false;
+let random_graph_params_is_open = false;
 
 
 let chosen_locale = 'not_defined';
@@ -64,19 +67,23 @@ let text_container_en = new Map([
         'Now we link our new node {1} to the defined tail.\n' +
         'Also, we change version\'s tail pointer to the new node.'],
 
-    ['dynamic_list_probable_change',
-        'Next step is probable change of auxiliary lists.\n' +
+    ['dynamic_list_exists',
+        'Dynamic list exists, so we try swapping it with the operational one.'],
+
+    ['dynamic_list_absent',
+        'Dynamic list doesn\'t exist yet for this version.\n' +
+        'So, next step is checking the dynamic list creation criteria.\n' +
         'We compare new number of untracked queue nodes (black ones) with corresponding version\'s operational list size (blue nodes).'],
 
-    ['list_size_nothing_changes',
+    ['criteria_not_fulfilled',
         'Operational list size is {1}, untracked nodes amount is {2}.\n' +
         'List has bigger or same size as 1/2 of untracked nodes amount.\n' +
-        'Nothing needs to be changed.'],
+        'Criteria isn\'t fulfilled, so nothing needs to be changed.'],
 
-    ['list_size_needs_changes',
+    ['criteria_fulfilled',
         'Operational list size is {1}, untracked nodes amount is {2}.\n' +
         'List has lesser size comparing to 1/2 of untracked nodes amount.\n' +
-        'We check if it\'s possible to swap operational and dynamic lists.'],
+        'Criteria is fulfilled, so we have to start building new dynamic list.'],
 
     ['swap_success',
         'We successfully swapped lists, now dynamic list is empty.\n' +
@@ -144,7 +151,7 @@ let text_container_en = new Map([
         'Let\'s add it to the tree.'],
 
     ['try_swap_again',
-        'Because we created new dynamic node, we need to try swapping operational and dynamic lists again.'],
+        'Because we created new dynamic node, we need to try swapping operational and dynamic lists.'],
 
     ['ended_pushing',
         'We ended pushing to our chosen version!'],
@@ -201,19 +208,23 @@ let text_container_ru = new Map([
         'Теперь мы можем привязать новую вершину {1} к \'хвосту\' этой версии в главном графе.\n' +
         'Также изменим указатель на \'хвост\' у версии.'],
 
-    ['dynamic_list_probable_change',
-        'Возможно, нам необходимо изменить и дополнительные списки.\n' +
+    ['dynamic_list_exists',
+        'Динамический список существует, поэтому попробуем поменять его с операционным местами.'],
+
+    ['dynamic_list_absent',
+        'Динамический список еще не был создан для этой версии.\n' +
+        'Поэтому, проверим критерий построения нового списка.\n' +
         'Для этого мы сравниваем новое количество неотслеживаемых вершин (выделены черным цветом) с размером соответствующего операционного списка (выделен голубым цветом).'],
 
-    ['list_size_nothing_changes',
+    ['criteria_not_fulfilled',
         'Размер операционного списка - {1}, а неотслеживаемых вершин - {2}.\n' +
         'То есть, список больше или равен 1/2 количества неотслеживаемых вершин.\n' +
-        'Нет необходимости в изменениях.'],
+        'Критерий создания динамического списка не выполнен, никакие изменения не требуются.'],
 
-    ['list_size_needs_changes',
+    ['criteria_fulfilled',
         'Размер операционного списка - {1}, а неотслеживаемых вершин - {2}.\n' +
         'То есть, список меньше, чем 1/2 количества неотслеживаемых вершин.\n' +
-        'Проверим, можно ли поменять местами операционный и динамический списки.'],
+        'Критерий создания динамического списка выполняется, поэтому создадим его.'],
 
     ['swap_success',
         'Мы успешно поменяли списки местами, теперь динамический список пуст.\n' +
@@ -280,7 +291,7 @@ let text_container_ru = new Map([
         'Так как у текущей версии не было динамического списка, привяжем ее к указателю на NULL.\n'],
 
     ['try_swap_again',
-        'Так как мы создали новую динамическую вершину, попробуем снова поменять местами динамический и операционный списки местами.'],
+        'Так как мы создали новую динамическую вершину, попробуем поменять местами динамический и операционный списки местами.'],
 
     ['ended_pushing',
         'Мы успешно добавили вершину к выбранной версии!'],
@@ -895,6 +906,7 @@ async function OperationsCoordinator(parent_version_num) {
         action = await WaitForNextAction();
         if (action === 'break_out') {
             ReturnFromStepByStepLayout();
+            observer.stop = true;
             return;
         }
         while (action === "prev") {
@@ -902,6 +914,7 @@ async function OperationsCoordinator(parent_version_num) {
                 action = await WaitForNextAction();
                 if (action === 'break_out') {
                     ReturnFromStepByStepLayout();
+                    observer.stop = true;
                     return;
                 }
             } else {
@@ -948,7 +961,7 @@ async function CopyOldVersion([parent_version_num]) {
     }
     return [DefineNodeToPop, [parent_version_num]];
 }
-async function DefineTailNodeToLink([parent_version_num]) { //needs text about linking to defined node
+async function DefineTailNodeToLink([parent_version_num]) {
     let parent_version = _versions[parent_version_num];
     let son = parent_version.tail;
     highlighters.AddMainNode([son], true);
@@ -976,53 +989,73 @@ async function LinkNewMainNode([parent_version_num]) {
     highlighters.AddMainLink([_links.length - 1], true);
     HighlightVersion(_versions.length - 1);
     GetNextStepText('push_new_node', _nodes[new_node].label);
-    return [DynamicListProbableChange, [_versions.length - 1]];
+    return [DynamicListExistence, []];
 }
 
-async function DynamicListProbableChange([version_num]) {
+async function DynamicListExistence() {
     highlighters.Clear();
-    GetNextStepText('dynamic_list_probable_change');
-    return [CheckDynamicListSize, [version_num]];
+    let version = _versions.at(-1);
+
+    if (version.dynamic_list !== null) {
+        GetNextStepText('dynamic_list_exists');
+        return [TrySwappingLists, []];
+    }
+    GetNextStepText('dynamic_list_absent');
+    return [CheckDynamicListCriteria, []];
 }
-async function CheckDynamicListSize([version_num]){
-    let version = _versions[version_num];
+async function CheckDynamicListCriteria(){
+    let version = _versions.at(-1);
     let untracked_nodes_amount = Math.max(0, version.size - 2);
     if (version.operational_list_size * 2 >= untracked_nodes_amount) {
-        GetNextStepText('list_size_nothing_changes', version.operational_list_size, untracked_nodes_amount);
+        GetNextStepText('criteria_not_fulfilled', version.operational_list_size, untracked_nodes_amount);
         if (is_push) {
             return [EndPushing, []];
         }
         return [EndPopping, []];
     }
-    GetNextStepText('list_size_needs_changes', version.operational_list_size, untracked_nodes_amount);
-    return [TrySwappingLists, [version_num]];
+    GetNextStepText('criteria_fulfilled', version.operational_list_size, untracked_nodes_amount);
+    return [TargetedNodeDefiningNull1, []];
+}
+async function TargetedNodeDefiningNull1() {
+    let version = _versions.at(-1);
+
+    let tail = version.tail;
+    highlighters.AddMainNode([tail], true);
+    GetNextStepText('define_targeted_node_null', _nodes[tail].label);
+    return [TargetedNodeDefiningNull2, []];
+}
+async function TargetedNodeDefiningNull2() {
+    let version = _versions.at(-1);
+
+    let tail = version.tail;
+    let new_targeted_main_node = _nodes[version.tail].son_id;
+    highlighters.Clear(false);
+    highlighters.AddMainNode([new_targeted_main_node], true);
+    GetNextStepText('define_targeted_node_null2', _nodes[tail].label, _nodes[new_targeted_main_node].label);
+    return [NewDynamicNodeCreation, [new_targeted_main_node]];
 }
 
-async function TrySwappingLists([version_num]) {
+async function TrySwappingLists() {
     highlighters.Clear();
-    let version = _versions[version_num];
-    if (version.dynamic_list === null) {
-        is_first_swap = false;
-        GetNextStepText('dynamic_list_is_null');
-        return [TargetedNodeDefiningNull1, [version_num]];
-    }
+    let version = _versions.at(-1);
+
     let dynamic_list = version.dynamic_list;
     highlighters.AddDynamicNode([dynamic_list], true);
     GetNextStepText('get_leading_dynamic_node', _dynamic_nodes[dynamic_list].label);
-    return [CheckIfReachedHead1, [version_num]];
+    return [CheckIfReachedHead1, []];
 }
-async function CheckIfReachedHead1([version_num]) {
-    let version = _versions[version_num];
+async function CheckIfReachedHead1() {
+    let version = _versions.at(-1);
 
     let dynamic_list = version.dynamic_list;
     let targeted_node = _dynamic_nodes[dynamic_list].target_node;
     highlighters.Clear(false);
     highlighters.AddMainNode([targeted_node], true);
     GetNextStepText('get_targeted_main_node', _dynamic_nodes[dynamic_list].label, _nodes[targeted_node].label);
-    return [CheckIfReachedHead2, [version_num]];
+    return [CheckIfReachedHead2, []];
 }
-async function CheckIfReachedHead2([version_num]) {
-    let version = _versions[version_num];
+async function CheckIfReachedHead2() {
+    let version = _versions.at(-1);
 
     let dynamic_list = version.dynamic_list;
     let targeted_node = _dynamic_nodes[dynamic_list].target_node;
@@ -1030,12 +1063,11 @@ async function CheckIfReachedHead2([version_num]) {
     highlighters.Clear(false);
     highlighters.AddMainNode([targeted_node_son], true);
     GetNextStepText('get_targeted_node_son', _dynamic_nodes[dynamic_list].label, _nodes[targeted_node].label, _nodes[targeted_node_son].label);
-    return [ConfirmListsSwap, [version_num]];
+    return [ConfirmListsSwap, []];
 }
-
-async function ConfirmListsSwap([version_num]) {
+async function ConfirmListsSwap() {
     highlighters.Clear();
-    let version = _versions[version_num];
+    let version = _versions.at(-1);
     let head = version.head;
     if (_nodes[_dynamic_nodes[version.dynamic_list].target_node].son_id === head) {
         version.operational_list = version.dynamic_list;
@@ -1044,9 +1076,8 @@ async function ConfirmListsSwap([version_num]) {
         version.dynamic_list_size = 0;
 
         GetNextStepText('reached_head_swap_confirmed', _nodes[head].label);
-        HighlightVersion(version_num);
+        HighlightVersion(_versions.length - 1);
         if (is_first_swap) {
-            is_first_swap = false;
             return [FirstSwapSuccess, []];
         }
         if (is_push) {
@@ -1055,9 +1086,8 @@ async function ConfirmListsSwap([version_num]) {
         return [EndPopping, []];
     }
     if (is_first_swap) {
-        is_first_swap = false;
         GetNextStepText('first_swap_failed', _nodes[head].label);
-        return [TargetedNodeDefining, [version_num]];
+        return [TargetedNodeDefining, []];
     }
     GetNextStepText('second_swap_failed', _nodes[head].label);
     if (is_push) {
@@ -1073,8 +1103,8 @@ async function FirstSwapSuccess() {
     return [EndPopping, []];
 }
 
-async function TargetedNodeDefining([version_num]) {
-    let version = _versions[version_num];
+async function TargetedNodeDefining() {
+    let version = _versions.at(-1);
 
     let dynamic_node = version.dynamic_list;
     let targeted_node = _dynamic_nodes[dynamic_node].target_node;
@@ -1082,30 +1112,10 @@ async function TargetedNodeDefining([version_num]) {
     highlighters.Clear(false);
     highlighters.AddMainNode([new_targeted_main_node], true);
     GetNextStepText('define_targeted_node', _nodes[new_targeted_main_node].label);
-    return [NewDynamicNodeCreation, [version_num, new_targeted_main_node]];
+    return [NewDynamicNodeCreation, [new_targeted_main_node]];
 }
-
-async function TargetedNodeDefiningNull1([version_num]) {
-    let version = _versions[version_num];
-
-    let tail = version.tail;
-    highlighters.AddMainNode([tail], true);
-    GetNextStepText('define_targeted_node_null', _nodes[tail].label);
-    return [TargetedNodeDefiningNull2, [version_num]];
-}
-async function TargetedNodeDefiningNull2([version_num]) {
-    let version = _versions[version_num];
-
-    let tail = version.tail;
-    let new_targeted_main_node = _nodes[version.tail].son_id;
-    highlighters.Clear(false);
-    highlighters.AddMainNode([new_targeted_main_node], true);
-    GetNextStepText('define_targeted_node_null2', _nodes[tail].label, _nodes[new_targeted_main_node].label);
-    return [NewDynamicNodeCreation, [version_num, new_targeted_main_node]];
-}
-
-async function NewDynamicNodeCreation([version_num, targeted_main_node]) {
-    let version = _versions[version_num];
+async function NewDynamicNodeCreation([targeted_main_node]) {
+    let version = _versions.at(-1);
 
     let next_list = (version.dynamic_list !== null) ? version.dynamic_list : 0;
     let x_coord = _dynamic_nodes[next_list].x - 30 - GetRandomInt(5);
@@ -1125,19 +1135,19 @@ async function NewDynamicNodeCreation([version_num, targeted_main_node]) {
     ++version.dynamic_list_size;
 
     await UpdateSecondaryLayout__NoPhysics();
-    HighlightVersion(version_num);
+    HighlightVersion(_versions.length - 1);
     highlighters.Clear(false);
     highlighters.AddDynamicNode([_dynamic_nodes.length - 1]);
     highlighters.AddDynamicLink([_dynamic_links.length - 1], true);
 
-    return [TrySwappingListsAgain, [version_num]];
+    return [TrySwappingListsAgain, []];
 }
-async function TrySwappingListsAgain([version_num]) {
+async function TrySwappingListsAgain() {
     highlighters.Clear();
+    is_first_swap = false;
     GetNextStepText('try_swap_again');
-    return [TrySwappingLists, [version_num]];
+    return [TrySwappingLists, []];
 }
-
 async function EndPushing() {
     GetNextStepText('ended_pushing');
     return ['End', []];
@@ -1226,7 +1236,7 @@ async function ShowNewVersion([parent_version_num]) {
     highlighters.AddMainNode([version.head]);
     highlighters.AddDynamicNode([version.operational_list], true);
     HighlightVersion(_versions.length - 1);
-    return [DynamicListProbableChange, [_versions.length - 1]];
+    return [DynamicListExistence, []];
 }
 async function EndPopping() {
     GetNextStepText('ended_popping');
@@ -1295,13 +1305,31 @@ async function ConfigAuxiliaryListsSwap() {
     await Push(6);
 }
 
-
-async function RandomGraph(size) {
+async function RandomGraphParamsSubmit() {
+    let form = document.getElementById('random_size_form');
+    let size = form.random_size.value;
+    form.reset();
+    form = document.getElementById('random_coeff_form');
+    let coeff = form.random_coeff.value;
+    form.reset();
+    if (!isNum(size) || !isNum(coeff) || coeff < 0 || coeff > 100) {
+        return;
+    }
+    RandomGraphParamsToggler();
+    console.log('create graph. size:', size, 'coeff:', coeff);
+    await RandomGraph(size, coeff);
+}
+async function RandomGraph(size, change_coeff = 0) {
     await ResetEnvironment();
     simulation_time = 1;
     let max_version = 0;
-    for (let iter = 0; iter < size; ++iter) {
-        let version = GetRandomInt(max_version);
+    for (let iter = 0; iter < size - 1; ++iter) {
+        let version;
+        if (change_coeff > GetRandomInt(100)) {
+            version = GetRandomInt(max_version);
+        } else {
+            version = max_version;
+        }
         ++max_version;
         await Push__NoStepping(version);
     }
@@ -1310,7 +1338,12 @@ async function RandomGraph(size) {
     simulation_time = 3000;
 }
 
-
+async function AwaitFor(observer, value) {
+    while (observer.stop !== value) {
+        await sleep(1);
+    }
+    console.warn('change');
+}
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -1856,10 +1889,13 @@ async function SetConfiguration(config_to_set) {
 }
 async function ResetEnvironment() {
     if (step_by_step_is_active) {
+        observer.stop = false;
         break_out = true;
-        await sleep(20);
+        await AwaitFor(observer, true);
     }
-
+    observer.stop = false;
+    TurnOffVersionHighlighting();
+    await AwaitFor(observer, true);
     _nodes = [];
     _links = [];
     _dynamic_nodes = [];
@@ -1895,6 +1931,7 @@ function HighlightVersion(version_num) {
 }
 function TurnOffVersionHighlighting() {
     if (chosen_version < 0) {
+        observer.stop = true;
         return;
     }
     ver_svg.select('g.nodes').select("[id='" + chosen_version + "']").dispatch('click');
@@ -1932,6 +1969,7 @@ function VersionClick(event, object) {
             .attr('class', 'graph_text');
 
         chosen_version = -1;
+        observer.stop = true;
         return;
     }
 
@@ -1974,6 +2012,7 @@ function VersionClick(event, object) {
         main_svg.select('g.texts')
             .select("[id='0']")
             .attr('class', 'graph_text');
+        observer.stop = true;
         return;
     }
 
@@ -2076,6 +2115,7 @@ function VersionClick(event, object) {
         .attr('class', (object, ind, selection) => {
             return ChangeClassWithRetain(object, ind, selection, 'blink_node', 'tail_node')
         });
+    observer.stop = true;
 }
 
 function PopupMouseOverVersionNode(event, object) {
@@ -2164,6 +2204,16 @@ function CloseSideBar() {
     sidebar.classList.add('close_sidebar');
 }
 
+function FloatingWindowCloser() {
+    if (instruction_is_open) {
+        HideInstruction();
+        instruction_is_open = false;
+    } else if (random_graph_params_is_open) {
+        HideRandomGraphParams();
+        random_graph_params_is_open = false;
+    }
+}
+
 function InstructionToggler() {
     if (instruction_is_open) {
         HideInstruction();
@@ -2187,4 +2237,29 @@ function HideInstruction() {
     let instruction = document.getElementById('instruction_block');
     instruction.classList.remove('open_instruction');
     instruction.classList.add('close_instruction');
+}
+
+function RandomGraphParamsToggler() {
+    if (random_graph_params_is_open) {
+        HideRandomGraphParams();
+    } else {
+        ShowRandomGraphParams();
+    }
+    random_graph_params_is_open = !random_graph_params_is_open;
+}
+function ShowRandomGraphParams() {
+    let overlay = document.getElementById('overlay');
+    overlay.classList.remove('overlay_off');
+    overlay.classList.add('overlay_on');
+    let instruction = document.getElementById('random_graph_block');
+    instruction.classList.remove('close_random_graph_block');
+    instruction.classList.add('open_random_graph_block');
+}
+function HideRandomGraphParams() {
+    let overlay = document.getElementById('overlay');
+    overlay.classList.remove('overlay_on');
+    overlay.classList.add('overlay_off');
+    let instruction = document.getElementById('random_graph_block');
+    instruction.classList.remove('open_random_graph_block');
+    instruction.classList.add('close_random_graph_block');
 }

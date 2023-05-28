@@ -43,7 +43,7 @@
 
         <button id="reset_button" class="menu_button" onclick="ResetEnvironment();CloseSideBar();">Reset environment</button>
 
-        <button id="random_graph_button" class="menu_button" onclick="RandomGraph(50);CloseSideBar();">Create random graph</button>
+        <button id="random_graph_button" class="menu_button" onclick="RandomGraphParamsToggler();CloseSideBar();">Create random graph</button>
     </div>
 
     <div class="container_flex">
@@ -97,11 +97,27 @@
         </div>
     </div>
 
+    <div id="random_graph_block" class="random_graph_block">
+        <form id="random_size_form" class="random_form" onsubmit="return false">
+            <label id="random_size_label" for="random_size" style="font-size: 17px">Size of random graph:</label>
+            <input type="text" id="random_size" class="random_size" name="random_size" size="3">
+        </form>
+
+        <form id="random_coeff_form" class="random_form" onsubmit="return false">
+            <label id="random_coeff_label" for="random_coeff" style="font-size: 17px">Version change chance coefficient:</label>
+            <input type="text" id="random_coeff" class="random_coeff" name="random_coeff" size="3">
+        </form>
+
+        <div class="lower_btn">
+            <button id="random_graph_submit_button" class="ordinary_button" onclick="RandomGraphParamsSubmit();">Create</button>
+        </div>
+    </div>
+
     <script>
         Setup();
     </script>
 
-    <div id="overlay" class="overlay" onclick="InstructionToggler()"></div>
+    <div id="overlay" class="overlay" onclick="FloatingWindowCloser()"></div>
 
     <div id="version_node_popup" class="popup">
         <div id="v_n_p_heading">Version pointers:</div>
