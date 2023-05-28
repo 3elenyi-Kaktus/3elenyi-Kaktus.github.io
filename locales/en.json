@@ -7,6 +7,10 @@
     "reset_button": "Reset environment",
     "random_graph_button": "Create random graph",
 
+    "random_size_label": "Size of random graph:",
+    "random_coeff_label": "Version change chance coefficient:",
+    "random_graph_submit_button": "Create",
+
     "CS_1": "None",
     "CS_2": "Push to ordinary queue",
     "CS_3": "Pop from 1-element queue",

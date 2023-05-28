@@ -367,7 +367,10 @@ let instructions_container = new Map([
         "</p>\n" +
         "<h4 class=\"instruction_topic\">1.4 Создание случайного графа</h4>\n" +
         "<p class=\"instruction_paragraph\">\n" +
-        "    Создать новый граф, набирающийся операциями Добавления вершин к случайным Версиям.\n" +
+        "    Создание случайного графа, набирающегося последовательными операциями Добавления к случайным Версиям.<br>\n" +
+        "    Вы можете контролировать конечный размер графа (положительные числа), а также его характер создания (числа от 0 до 100):<br>\n" +
+        "    Более низкие коэффициенты будут приводить к линейным построениям, с помощью добавления вершин к последней доступной Версии.<br>\n" +
+        "    Высокие же будут создавать граф, стараясь менять целевую Версию на каждом шаге случайным образом.\n" +
         "</p>\n" +
         "<h2>2. Основной интерфейс</h2>\n" +
         "<h4 class=\"instruction_topic\">2.1 Строка Версий</h4>\n" +
@@ -422,7 +425,10 @@ let instructions_container = new Map([
         "</p>\n" +
         "<h4 class=\"instruction_topic\">1.4 Random graph creation</h4>\n" +
         "<p class=\"instruction_paragraph\">\n" +
-        "    Make new graph, built by continuous Add node operations to random Versions.\n" +
+        "    Make new graph, built by continuous Add node operations to random Versions.<br>\n" +
+        "    You can control final graph size (positive integers) and it's creation process (0-100 integers):<br>\n" +
+        "    Lower coefficients will result in more continuous build via adding to the last available version.<br>\n" +
+        "    Higher ones will tend to change targeted version number for push operation randomly on every step.\n" +
         "</p>\n" +
         "<h2>2. Main Interface</h2>\n" +
         "<h4 class=\"instruction_topic\">2.1 Versions</h4>\n" +
