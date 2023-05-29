@@ -165,7 +165,7 @@ let text_container_en = new Map([
 
     ['pop_node_list_size_1',
         'We have only 1 node in our queue, so we can simply reset our pointers to head and tail to NULL.\n' +
-        'Basically, our new version equals to starting N version.'],
+        'Basically, our new version equals to starting 0 version.'],
 
     ['pop_node_list_size_2',
         'We have only 2 nodes in our queue, so we can simply change our version\'s head-pointer to tail-pointer.'],
@@ -305,7 +305,7 @@ let text_container_ru = new Map([
 
     ['pop_node_list_size_1',
         'В нашей очереди только 1 вершина, поэтому достаточно обнулить указатели на \'голову\' и \'хвост\' текущей версии на NULL.\n' +
-        'Проще говоря, теперь эта версия эквивалентна стартовой версии N.'],
+        'Проще говоря, теперь эта версия эквивалентна стартовой версии 0.'],
 
     ['pop_node_list_size_2',
         'В нашей очереди есть только 2 вершины, поэтому достаточно в указатель на \'голову\' записать текущий указатель на \'хвост\'.'],
@@ -1828,7 +1828,7 @@ async function Setup() {
     SetupMainSVG();
     SetupSecondarySVG();
 
-    _versions.push(new Version(0, 0, null, null, 0, 0, 0, 0, 'N', null, 25, 25));
+    _versions.push(new Version(0, 0, null, null, 0, 0, 0, 0, '0', null, 25, 25));
     _nodes.push(new Node(null, 0, 'Null', 40, 40));
     _dynamic_nodes.push(new ListNode(null, null, 0, 'Null', 40, 40));
 
@@ -1914,7 +1914,7 @@ async function ResetEnvironment() {
     SetupMainSVG();
     SetupSecondarySVG();
 
-    _versions.push(new Version(0, 0, null, null, 0, 0, 0, 0, 'N', null, 25, 25));
+    _versions.push(new Version(0, 0, null, null, 0, 0, 0, 0, '0', null, 25, 25));
     _nodes.push(new Node(null, 0, 'Null', 40, 40));
     _dynamic_nodes.push(new ListNode(null, null, 0, 'Null', 40, 40));
 
